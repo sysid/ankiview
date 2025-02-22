@@ -1,6 +1,6 @@
 [package]
 name = "ankiview"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["sysid <sysid@gmx.de>"]
 description = "Fast Anki card viewer"
@@ -12,7 +12,7 @@ readme = "../README.md"
 license = "BSD-3-Clause"
 
 [dependencies]
-anki = { git = "https://github.com/ankitects/anki.git", tag = "25.02" }
+anki = { git = "https://github.com/ankitects/anki.git", tag = "25.02" }  # prevents from crates.io
 anyhow = "1.0.96"
 clap = { version = "4.5.30", features = ["derive"] }
 ctor = "0.3.6"

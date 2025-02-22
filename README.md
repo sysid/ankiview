@@ -1,7 +1,5 @@
 # AnkiView 🎴
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-
 AnkiView is a command-line tool that lets you quickly view Anki notes directly from your collection file, without needing to open the Anki application. Perfect for quick information gathering.
 
 ## Features ✨
@@ -120,11 +118,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## License 📄
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ## Acknowledgments 🙏
 
 - [Anki](https://apps.ankiweb.net/) - The amazing flashcard program
-- [anki-core](https://crates.io/crates/anki) - Rust bindings for Anki
