@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Run ankiview" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
+  <configuration default="false" name="Run ankiview geo" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
     <option name="buildProfileId" value="dev" />
-    <option name="command" value="run --package ankiview --bin ankiview -- -vv -c $PROJECT_DIR$/../other-anki/data/tw/collection.anki2 1727417322608" />
+    <option name="command" value="run --package ankiview --bin ankiview -- -vv -c $PROJECT_DIR$/../other-anki/data/tw/collection.anki2 1737647330399" />
     <option name="workingDirectory" value="file://$PROJECT_DIR$/ankiview" />
     <envs />
     <option name="emulateTerminal" value="true" />

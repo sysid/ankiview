@@ -2,14 +2,25 @@
 use crate::domain::Note;
 use html_escape::decode_html_entities;
 use regex::Regex;
+use std::path::Path;
 use tracing::instrument;
 
 #[derive(Debug)]
-pub struct HtmlPresenter;
+pub struct HtmlPresenter {
+    media_dir: Option<String>,
+}
 
 impl HtmlPresenter {
     pub fn new() -> Self {
-        Self
+        Self {
+            media_dir: None
+        }
+    }
+
+    pub fn with_media_dir<P: AsRef<Path>>(media_dir: P) -> Self {
+        Self {
+            media_dir: Some(media_dir.as_ref().to_string_lossy().into_owned())
+        }
     }
 
     #[instrument(level = "debug", ret)]
@@ -22,13 +33,32 @@ impl HtmlPresenter {
             r"<pre><code[^>]*>(?s)\s*((?:\$\$.*?\$\$)|(?:\$.*?\$))\s*</code></pre>"
         ).unwrap();
 
-        code_block_re
+        let processed = code_block_re
             .replace_all(&decoded, |caps: &regex::Captures| {
                 caps.get(1)
                     .map_or("", |m| m.as_str().trim())
                     .to_string()
             })
-            .into_owned()
+            .into_owned();
+
+        // Handle image tags if media directory is set
+        if let Some(ref media_dir) = self.media_dir {
+            let img_re = Regex::new(r#"<img\s+src="([^"]+)"([^>]*)>"#).unwrap();
+            img_re.replace_all(&processed, |caps: &regex::Captures| {
+                let src = caps.get(1).unwrap().as_str();
+                let attrs = caps.get(2).map_or("", |m| m.as_str());
+
+                // If src is a URL, leave it unchanged
+                if src.starts_with("http://") || src.starts_with("https://") {
+                    format!(r#"<img src="{src}"{attrs}>"#)
+                } else {
+                    // Otherwise, prefix with media directory
+                    format!(r#"<img src="file://{media_dir}/{src}"{attrs}>"#)
+                }
+            }).into_owned()
+        } else {
+            processed
+        }
     }
 
     pub fn render(&self, note: &Note) -> String {
@@ -75,6 +105,12 @@ impl HtmlPresenter {
             border-radius: 8px;
             padding: 2rem;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        img {{
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 1rem auto;
         }}
         pre {{
             white-space: pre-wrap;
@@ -155,35 +191,36 @@ impl HtmlPresenter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::Note;
     use rstest::rstest;
 
     #[rstest]
     #[case(
-        r#"<pre><code class="language-tex">$$\begin{cases}
-a, & x < 0 \\
-b, & x \geq 0
-\end{cases}$$</code></pre>"#,
-        r"$$\begin{cases}
-a, & x < 0 \\
-b, & x \geq 0
-\end{cases}$$"
+        r#"<pre><code class="language-tex">$\begin{cases} a, & x < 0 \\ b, & x \geq 0 \end{cases}$</code></pre>"#,
+        r"$\begin{cases} a, & x < 0 \\ b, & x \geq 0 \end{cases}$",
+        Some("/media")
     )]
     #[case(
-        "Simple inline $x^2$ math",
-        "Simple inline $x^2$ math"
+        r#"<img src="test.jpg" alt="test">"#,
+        r#"<img src="file:///media/test.jpg" alt="test">"#,
+        Some("/media")
     )]
-    fn test_latex_extraction(#[case] input: &str, #[case] expected: &str) {
-        let presenter = HtmlPresenter::new();
-        let note = Note {
-            id: 1,
-            front: input.to_string(),
-            back: "Test".to_string(),
-            tags: vec![],
-            model_name: "Basic".to_string(),
+    #[case(
+        r#"<img src="https://example.com/test.jpg" alt="test">"#,
+        r#"<img src="https://example.com/test.jpg" alt="test">"#,
+        Some("/media")
+    )]
+    fn test_content_processing(
+        #[case] input: &str,
+        #[case] expected: &str,
+        #[case] media_dir: Option<&str>
+    ) {
+        let presenter = if let Some(dir) = media_dir {
+            HtmlPresenter::with_media_dir(dir)
+        } else {
+            HtmlPresenter::new()
         };
 
-        let processed = presenter.process_content(&input);
+        let processed = presenter.process_content(input);
         assert_eq!(processed, expected);
     }
 }

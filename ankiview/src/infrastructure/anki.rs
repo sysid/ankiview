@@ -10,6 +10,7 @@ use tracing::{debug, info, instrument};
 
 pub struct AnkiRepository {
     collection: Collection,
+    media_dir: PathBuf,
 }
 
 impl AnkiRepository {
@@ -51,8 +52,15 @@ impl AnkiRepository {
             .build()
             .with_context(|| "Failed to open Anki collection. Is Anki currently running?")?;
 
+        // Get media directory path
+        let media_dir = path.parent().unwrap().join("collection.media");
+
         info!(?path, "Successfully opened Anki collection");
-        Ok(Self { collection })
+        Ok(Self { collection, media_dir })
+    }
+
+    pub fn media_dir(&self) -> &Path {
+        &self.media_dir
     }
 }
 

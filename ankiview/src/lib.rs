@@ -29,12 +29,13 @@ pub fn run(args: Args) -> Result<()> {
     };
 
     let repository = AnkiRepository::new(&collection_path)?;
+    let media_dir = repository.media_dir().to_path_buf();
 
     // Initialize application
     let mut viewer = application::NoteViewer::new(repository);
 
     // Initialize presentation
-    let presenter = HtmlPresenter::new();
+    let presenter = HtmlPresenter::with_media_dir(media_dir);
     let mut renderer = infrastructure::renderer::ContentRenderer::new();
 
     // Execute use case
