@@ -77,7 +77,7 @@ impl ContentRenderer {
         }
 
         // Keep the temp directory alive briefly
-        std::thread::sleep(std::time::Duration::from_secs(1));
+        std::thread::sleep(std::time::Duration::from_millis(200));
 
         Ok(())
     }

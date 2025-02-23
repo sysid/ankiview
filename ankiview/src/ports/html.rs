@@ -6,20 +6,21 @@ use std::path::Path;
 use tracing::instrument;
 
 #[derive(Debug)]
+/// A presenter for rendering notes as HTML.
+/// acts as a boundary adapter
+/// Domain (Note) -> Application (NoteViewer) -> Port (HtmlPresenter) -> Infrastructure (ContentRenderer)
 pub struct HtmlPresenter {
     media_dir: Option<String>,
 }
 
 impl HtmlPresenter {
     pub fn new() -> Self {
-        Self {
-            media_dir: None
-        }
+        Self { media_dir: None }
     }
 
     pub fn with_media_dir<P: AsRef<Path>>(media_dir: P) -> Self {
         Self {
-            media_dir: Some(media_dir.as_ref().to_string_lossy().into_owned())
+            media_dir: Some(media_dir.as_ref().to_string_lossy().into_owned()),
         }
     }
 
@@ -29,33 +30,33 @@ impl HtmlPresenter {
         let decoded = decode_html_entities(&content).to_string();
 
         // Replace code blocks containing LaTeX with just the LaTeX content
-        let code_block_re = Regex::new(
-            r"<pre><code[^>]*>(?s)\s*((?:\$\$.*?\$\$)|(?:\$.*?\$))\s*</code></pre>"
-        ).unwrap();
+        let code_block_re =
+            Regex::new(r"<pre><code[^>]*>(?s)\s*((?:\$\$.*?\$\$)|(?:\$.*?\$))\s*</code></pre>")
+                .unwrap();
 
         let processed = code_block_re
             .replace_all(&decoded, |caps: &regex::Captures| {
-                caps.get(1)
-                    .map_or("", |m| m.as_str().trim())
-                    .to_string()
+                caps.get(1).map_or("", |m| m.as_str().trim()).to_string()
             })
             .into_owned();
 
         // Handle image tags if media directory is set
         if let Some(ref media_dir) = self.media_dir {
             let img_re = Regex::new(r#"<img\s+src="([^"]+)"([^>]*)>"#).unwrap();
-            img_re.replace_all(&processed, |caps: &regex::Captures| {
-                let src = caps.get(1).unwrap().as_str();
-                let attrs = caps.get(2).map_or("", |m| m.as_str());
+            img_re
+                .replace_all(&processed, |caps: &regex::Captures| {
+                    let src = caps.get(1).unwrap().as_str();
+                    let attrs = caps.get(2).map_or("", |m| m.as_str());
 
-                // If src is a URL, leave it unchanged
-                if src.starts_with("http://") || src.starts_with("https://") {
-                    format!(r#"<img src="{src}"{attrs}>"#)
-                } else {
-                    // Otherwise, prefix with media directory
-                    format!(r#"<img src="file://{media_dir}/{src}"{attrs}>"#)
-                }
-            }).into_owned()
+                    // If src is a URL, leave it unchanged
+                    if src.starts_with("http://") || src.starts_with("https://") {
+                        format!(r#"<img src="{src}"{attrs}>"#)
+                    } else {
+                        // Otherwise, prefix with media directory
+                        format!(r#"<img src="file://{media_dir}/{src}"{attrs}>"#)
+                    }
+                })
+                .into_owned()
         } else {
             processed
         }
@@ -73,6 +74,30 @@ impl HtmlPresenter {
     <meta charset="UTF-8">
     <title>Anki Note {}</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- Common programming languages -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/shell.min.js"></script>
+    <!-- Infrastructure as Code -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/terraform.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/dockerfile.min.js"></script>
+    <!-- Web Development -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/css.min.js"></script>
+    <!-- Data Formats -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/toml.min.js"></script>
+    <!-- Additional Languages -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/kotlin.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/sql.min.js"></script>
     <script>
         window.MathJax = {{
             tex: {{
@@ -90,6 +115,11 @@ impl HtmlPresenter {
                 }}
             }}
         }};
+        document.addEventListener('DOMContentLoaded', (event) => {{
+            document.querySelectorAll('pre code').forEach((block) => {{
+                hljs.highlightBlock(block);
+            }});
+        }});
     </script>
     <style>
         body {{
@@ -119,12 +149,20 @@ impl HtmlPresenter {
             padding: 1rem;
             border-radius: 4px;
             overflow-x: auto;
+            margin: 1rem 0;
         }}
         code {{
-            background-color: #f0f0f0;
-            padding: 2px 4px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+            font-size: 0.9em;
+            padding: 0.2em 0.4em;
             border-radius: 3px;
-            font-family: monospace;
+        }}
+        pre code {{
+            padding: 0;
+            font-size: 0.85em;
+            white-space: pre;
+            word-break: normal;
+            word-wrap: normal;
         }}
         .card-front {{
             margin-bottom: 2rem;
@@ -212,7 +250,7 @@ mod tests {
     fn test_content_processing(
         #[case] input: &str,
         #[case] expected: &str,
-        #[case] media_dir: Option<&str>
+        #[case] media_dir: Option<&str>,
     ) {
         let presenter = if let Some(dir) = media_dir {
             HtmlPresenter::with_media_dir(dir)
