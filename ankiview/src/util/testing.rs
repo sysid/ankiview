@@ -1,7 +1,7 @@
 // src/util/testing.rs
 
-use std::env;
 use anyhow::Result;
+use std::env;
 use tracing::{debug, info};
 use tracing_subscriber::{
     filter::filter_fn,
@@ -72,7 +72,6 @@ pub fn print_active_env_vars() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
 
     #[ctor::ctor]
     fn init() {

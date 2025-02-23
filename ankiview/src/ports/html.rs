@@ -13,6 +13,12 @@ pub struct HtmlPresenter {
     media_dir: Option<String>,
 }
 
+impl Default for HtmlPresenter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HtmlPresenter {
     pub fn new() -> Self {
         Self { media_dir: None }

@@ -56,7 +56,10 @@ impl AnkiRepository {
         let media_dir = path.parent().unwrap().join("collection.media");
 
         info!(?path, "Successfully opened Anki collection");
-        Ok(Self { collection, media_dir })
+        Ok(Self {
+            collection,
+            media_dir,
+        })
     }
 
     pub fn media_dir(&self) -> &Path {

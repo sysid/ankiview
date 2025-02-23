@@ -1,11 +1,11 @@
 // src/infrastructure/renderer.rs
+use anyhow::{Context, Result};
 use regex::Regex;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tempfile::Builder;
-use anyhow::{Context, Result};
 use tracing::instrument;
 
 #[derive(Debug)]
@@ -51,8 +51,7 @@ impl ContentRenderer {
     // Change the method signature to &mut self since we need to modify _temp_dir
     #[instrument(level = "debug")]
     pub fn open_in_browser(&mut self, path: &PathBuf) -> Result<()> {
-        let path_str = path.to_str()
-            .context("Failed to convert path to string")?;
+        let path_str = path.to_str().context("Failed to convert path to string")?;
 
         #[cfg(target_os = "macos")]
         {

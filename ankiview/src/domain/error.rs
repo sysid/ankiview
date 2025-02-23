@@ -10,4 +10,3 @@ pub enum DomainError {
     #[error("Collection error: {0}")]
     CollectionError(String),
 }
-

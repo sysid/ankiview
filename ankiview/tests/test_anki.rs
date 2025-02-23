@@ -24,6 +24,6 @@ fn given_nonexistent_note_when_getting_note_then_returns_error() -> Result<()> {
     let result = repo.get_note(999999);
 
     // Assert
-    assert!(matches!(result, Err(_)));
+    assert!(result.is_err());
     Ok(())
 }

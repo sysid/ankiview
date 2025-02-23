@@ -1,5 +1,5 @@
-use anyhow::Result;
 use ankiview::cli::args::Args;
+use anyhow::Result;
 use std::path::PathBuf;
 use tempfile::TempDir;
 

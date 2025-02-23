@@ -6,12 +6,12 @@ pub mod infrastructure;
 pub mod ports;
 pub mod util;
 
-use std::path::PathBuf;
+use crate::cli::args::Args;
 use anyhow::{Context, Result};
 use infrastructure::AnkiRepository;
 use ports::HtmlPresenter;
+use std::path::PathBuf;
 use tracing::{debug, info};
-use crate::cli::args::Args;
 
 pub fn run(args: Args) -> Result<()> {
     debug!(?args, "Starting ankiview with arguments");
