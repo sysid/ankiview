@@ -5,6 +5,7 @@ AnkiView is a command-line tool that lets you quickly view Anki notes directly f
 ## Features ✨
 
 - View any note by its ID in your default browser
+- Delete notes from your collection via CLI
 - Automatic collection file detection
 - Support for multiple Anki profiles
 - LaTeX math rendering support
@@ -31,28 +32,52 @@ cargo install --path .
 
 ## Usage 💡
 
+### View a note
+
 View a note by its ID:
 
 ```bash
 ankiview 1234567890
+# or explicitly:
+ankiview view 1234567890
 ```
 
 Use a specific collection file:
 
 ```bash
-ankiview -c /path/to/collection.anki2 1234567890
+ankiview view -c /path/to/collection.anki2 1234567890
 ```
 
 Specify an Anki profile:
 
 ```bash
-ankiview -p "User 1" 1234567890
+ankiview view -p "User 1" 1234567890
 ```
 
-Enable debug logging:
+### Delete a note
+
+Delete a note by its ID:
 
 ```bash
-ankiview -v 1234567890
+ankiview delete 1234567890
+```
+
+**Warning:** Deletion is permanent and will remove the note and all associated cards from your collection.
+
+All flags work with delete as well:
+
+```bash
+ankiview delete -c /path/to/collection.anki2 1234567890
+ankiview delete -p "User 1" 1234567890
+```
+
+### Debug logging
+
+Enable debug logging for any command:
+
+```bash
+ankiview -v delete 1234567890    # DEBUG level
+ankiview -vv view 1234567890     # TRACE level
 ```
 
 ## How It Works 🔧
