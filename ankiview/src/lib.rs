@@ -6,7 +6,7 @@ pub mod infrastructure;
 pub mod ports;
 pub mod util;
 
-use crate::cli::args::Args;
+use crate::cli::args::{Args, Command};
 use anyhow::{Context, Result};
 use infrastructure::AnkiRepository;
 use ports::HtmlPresenter;
@@ -16,18 +16,54 @@ use tracing::{debug, info};
 pub fn run(args: Args) -> Result<()> {
     debug!(?args, "Starting ankiview with arguments");
 
-    // Initialize infrastructure
-    let collection_path = match args.collection {
+    // Resolve command (handles backward compatibility)
+    let command = args.resolve_command();
+    debug!(?command, "Resolved command");
+
+    // Route to appropriate handler based on command
+    match command {
+        Command::View {
+            note_id,
+            collection,
+            profile,
+        } => {
+            let collection_path =
+                resolve_collection_path(collection, args.collection, profile, args.profile)?;
+            handle_view_command(note_id, collection_path)
+        }
+        Command::Delete {
+            note_id,
+            collection,
+            profile,
+        } => {
+            let collection_path =
+                resolve_collection_path(collection, args.collection, profile, args.profile)?;
+            handle_delete_command(note_id, collection_path)
+        }
+    }
+}
+
+fn resolve_collection_path(
+    cmd_collection: Option<PathBuf>,
+    args_collection: Option<PathBuf>,
+    cmd_profile: Option<String>,
+    args_profile: Option<String>,
+) -> Result<PathBuf> {
+    // Priority: command flags > top-level flags
+    match cmd_collection.or(args_collection) {
         Some(path) => {
             debug!(?path, "Using provided collection path");
-            path
+            Ok(path)
         }
         None => {
-            debug!(?args.profile, "Finding collection path for profile");
-            find_collection_path(args.profile.as_deref())?
+            let prof = cmd_profile.or(args_profile);
+            debug!(?prof, "Finding collection path for profile");
+            find_collection_path(prof.as_deref())
         }
-    };
+    }
+}
 
+fn handle_view_command(note_id: i64, collection_path: PathBuf) -> Result<()> {
     let repository = AnkiRepository::new(&collection_path)?;
     let media_dir = repository.media_dir().to_path_buf();
 
@@ -39,8 +75,8 @@ pub fn run(args: Args) -> Result<()> {
     let mut renderer = infrastructure::renderer::ContentRenderer::new();
 
     // Execute use case
-    info!(note_id = args.note_id, "Viewing note");
-    let note = viewer.view_note(args.note_id)?;
+    info!(note_id = note_id, "Viewing note");
+    let note = viewer.view_note(note_id)?;
     debug!(?note, "Retrieved note");
 
     let html = presenter.render(&note);
@@ -49,6 +85,29 @@ pub fn run(args: Args) -> Result<()> {
     // Create temporary file and open in browser
     let temp_path = renderer.create_temp_file(&html)?;
     renderer.open_in_browser(&temp_path)?;
+
+    Ok(())
+}
+
+fn handle_delete_command(note_id: i64, collection_path: PathBuf) -> Result<()> {
+    let repository = AnkiRepository::new(&collection_path)?;
+
+    // Initialize application
+    let mut deleter = application::NoteDeleter::new(repository);
+
+    // Execute use case
+    info!(note_id = note_id, "Deleting note");
+    let deleted_cards = deleter
+        .delete_note(note_id)
+        .with_context(|| format!("Failed to delete note {}", note_id))?;
+
+    // Print success message to stdout (unlike view which is silent)
+    println!(
+        "Successfully deleted note {} ({} card{} removed)",
+        note_id,
+        deleted_cards,
+        if deleted_cards == 1 { "" } else { "s" }
+    );
 
     Ok(())
 }

@@ -93,4 +93,42 @@ impl NoteRepository for AnkiRepository {
             model_name: model.name.clone(),
         })
     }
+
+    #[instrument(level = "debug", skip(self))]
+    fn delete_note(&mut self, id: i64) -> Result<usize, DomainError> {
+        debug!(note_id = id, "Attempting to delete note");
+
+        // Check if note exists first to provide better error messages
+        let note_exists = self
+            .collection
+            .storage
+            .get_note(NoteId(id))
+            .map_err(|e| {
+                DomainError::CollectionError(format!("Failed to check note existence: {}", e))
+            })?
+            .is_some();
+
+        if !note_exists {
+            debug!(note_id = id, "Note not found for deletion");
+            return Err(DomainError::NoteNotFound(id));
+        }
+
+        // Delete the note using the public API
+        // This handles cascading card deletion automatically
+        let result = self
+            .collection
+            .remove_notes(&[NoteId(id)])
+            .map_err(|e| DomainError::CollectionError(format!("Failed to delete note: {}", e)))?;
+
+        // Extract the count of deleted cards from OpOutput
+        let deleted_card_count = result.output;
+
+        info!(
+            note_id = id,
+            cards_deleted = deleted_card_count,
+            "Successfully deleted note"
+        );
+
+        Ok(deleted_card_count)
+    }
 }

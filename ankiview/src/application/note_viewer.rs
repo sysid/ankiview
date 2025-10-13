@@ -4,6 +4,10 @@ use anyhow::Result;
 
 pub trait NoteRepository {
     fn get_note(&mut self, id: i64) -> Result<Note, DomainError>;
+
+    /// Delete a note and all associated cards from the collection
+    /// Returns the number of cards deleted
+    fn delete_note(&mut self, id: i64) -> Result<usize, DomainError>;
 }
 
 pub struct NoteViewer<R: NoteRepository> {

@@ -1,52 +1,139 @@
-use ankiview::cli::args::Args;
-use anyhow::Result;
-use std::path::PathBuf;
-use tempfile::TempDir;
+use ankiview::cli::args::{Args, Command};
+use clap::Parser;
 
-fn setup_test_collection() -> Result<(TempDir, PathBuf)> {
-    let temp_dir = tempfile::tempdir()?;
-    let collection_path = temp_dir.path().join("collection.anki2");
+#[test]
+fn given_note_id_only_when_parsing_then_defaults_to_view() {
+    // Arrange
+    let args = vec!["ankiview", "1234567890"];
 
-    // Create a minimal valid collection using anki-core
-    // This is a simplified example - you'd want to create a proper test collection
-    std::fs::write(&collection_path, vec![0; 100])?;
+    // Act
+    let parsed = Args::try_parse_from(args).unwrap();
+    let command = parsed.resolve_command();
 
-    Ok((temp_dir, collection_path))
+    // Assert
+    match command {
+        Command::View {
+            note_id,
+            collection,
+            profile,
+        } => {
+            assert_eq!(note_id, 1234567890);
+            assert_eq!(collection, None);
+            assert_eq!(profile, None);
+        }
+        _ => panic!("Expected View command"),
+    }
 }
 
 #[test]
-fn given_valid_collection_path_when_running_then_succeeds() -> Result<()> {
+fn given_explicit_view_command_when_parsing_then_succeeds() {
     // Arrange
-    let (_temp_dir, collection_path) = setup_test_collection()?;
-
-    let args = Args {
-        note_id: 1,
-        collection: Some(collection_path),
-        profile: None,
-        verbose: 0,
-    };
+    let args = vec!["ankiview", "view", "1234567890"];
 
     // Act
-    let result = ankiview::run(args);
+    let parsed = Args::try_parse_from(args).unwrap();
 
     // Assert
-    assert!(result.is_err()); // Will error since note 1 doesn't exist
-    Ok(())
+    match parsed.command.unwrap() {
+        Command::View {
+            note_id,
+            collection,
+            profile,
+        } => {
+            assert_eq!(note_id, 1234567890);
+            assert_eq!(collection, None);
+            assert_eq!(profile, None);
+        }
+        _ => panic!("Expected View command"),
+    }
 }
 
 #[test]
-fn given_invalid_collection_path_when_running_then_fails() {
+fn given_delete_command_when_parsing_then_succeeds() {
     // Arrange
-    let args = Args {
-        note_id: 1,
-        collection: Some(PathBuf::from("/nonexistent/path")),
-        profile: None,
-        verbose: 0,
-    };
+    let args = vec!["ankiview", "delete", "1234567890"];
 
     // Act
-    let result = ankiview::run(args);
+    let parsed = Args::try_parse_from(args).unwrap();
 
     // Assert
-    assert!(result.is_err());
+    match parsed.command.unwrap() {
+        Command::Delete {
+            note_id,
+            collection,
+            profile,
+        } => {
+            assert_eq!(note_id, 1234567890);
+            assert_eq!(collection, None);
+            assert_eq!(profile, None);
+        }
+        _ => panic!("Expected Delete command"),
+    }
+}
+
+#[test]
+fn given_delete_with_collection_flag_when_parsing_then_succeeds() {
+    // Arrange
+    let args = vec![
+        "ankiview",
+        "delete",
+        "-c",
+        "/path/to/collection.anki2",
+        "1234567890",
+    ];
+
+    // Act
+    let parsed = Args::try_parse_from(args).unwrap();
+
+    // Assert
+    match parsed.command.unwrap() {
+        Command::Delete {
+            note_id,
+            collection,
+            profile,
+        } => {
+            assert_eq!(note_id, 1234567890);
+            assert_eq!(
+                collection,
+                Some(std::path::PathBuf::from("/path/to/collection.anki2"))
+            );
+            assert_eq!(profile, None);
+        }
+        _ => panic!("Expected Delete command"),
+    }
+}
+
+#[test]
+fn given_view_with_profile_flag_when_parsing_then_succeeds() {
+    // Arrange
+    let args = vec!["ankiview", "view", "-p", "User 1", "1234567890"];
+
+    // Act
+    let parsed = Args::try_parse_from(args).unwrap();
+
+    // Assert
+    match parsed.command.unwrap() {
+        Command::View {
+            note_id,
+            collection,
+            profile,
+        } => {
+            assert_eq!(note_id, 1234567890);
+            assert_eq!(collection, None);
+            assert_eq!(profile, Some("User 1".to_string()));
+        }
+        _ => panic!("Expected View command"),
+    }
+}
+
+#[test]
+fn given_verbose_flag_when_parsing_then_increments_count() {
+    // Arrange
+    let args = vec!["ankiview", "-vv", "1234567890"];
+
+    // Act
+    let parsed = Args::try_parse_from(args).unwrap();
+
+    // Assert
+    assert_eq!(parsed.verbose, 2);
 }
