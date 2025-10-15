@@ -64,6 +64,18 @@ upload:  ## upload
 build:  ## build
 	pushd $(pkg_src) && cargo build --release
 
+.PHONY: build-fast
+build-fast:  ## build debug version
+	pushd $(pkg_src) && cargo build
+
+.PHONY: install-debug
+install-debug: uninstall  ## install-debug (no release version)
+	@VERSION=$(shell cat VERSION) && \
+		echo "-M- Installing $$VERSION" && \
+		cp -vf ankiview/target/debug/$(BINARY) ~/bin/$(BINARY)$$VERSION && \
+		ln -vsf ~/bin/$(BINARY)$$VERSION ~/bin/$(BINARY)
+		# ~/bin/$(BINARY) completion bash > ~/.bash_completions/ankiview
+
 #.PHONY: install
 #install: uninstall  ## install
 	#@cp -vf $(pkg_src)/target/release/$(BINARY) ~/bin/$(BINARY)
@@ -77,6 +89,7 @@ install: uninstall  ## install
 .PHONY: uninstall
 uninstall:  ## uninstall
 	-@test -f ~/bin/$(BINARY) && rm -v ~/bin/$(BINARY)
+	rm -vf ~/.bash_completions/ankiview
 
 .PHONY: bump-major
 bump-major:  ## bump-major, tag and push
@@ -108,14 +121,31 @@ lint:  ## lint
 	pushd $(pkg_src) && cargo clippy
 
 .PHONY: create-release
-create-release:  ## create a release on GitHub via the gh cli
-	@if command -v gh version &>/dev/null; then \
-		echo "Creating GitHub release for v$(VERSION)"; \
-		gh release create "v$(VERSION)" --generate-notes; \
+create-release: check-github-token  ## create a release on GitHub via the gh cli
+	@if ! command -v gh &>/dev/null; then \
+		echo "You do not have the GitHub CLI (gh) installed. Please create the release manually."; \
+		exit 1; \
 	else \
-		echo "You do not have the github-cli installed. Please create release from the repo manually."; \
+		echo "Creating GitHub release for v$(VERSION)"; \
+		gh release create "v$(VERSION)" --generate-notes --latest; \
+	fi
+
+.PHONY: check-github-token
+check-github-token:  ## Check if GITHUB_TOKEN is set
+	@if [ -z "$$GITHUB_TOKEN" ]; then \
+		echo "GITHUB_TOKEN is not set. Please export your GitHub token before running this command."; \
 		exit 1; \
 	fi
+	@echo "GITHUB_TOKEN is set"
+	#@$(MAKE) fix-version  # not working: rustrover deleay
+
+.PHONY: fix-version
+fix-version:  ## fix-version of Cargo.toml, re-connect with HEAD
+	git add bkmr/Cargo.lock
+	git commit --amend --no-edit
+	git tag -f "v$(VERSION)"
+	git push --force-with-lease
+	git push --tags --force
 
 
 ################################################################################
