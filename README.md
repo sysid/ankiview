@@ -37,21 +37,19 @@ cargo install --path .
 View a note by its ID:
 
 ```bash
-ankiview 1234567890
-# or explicitly:
 ankiview view 1234567890
 ```
 
 Use a specific collection file:
 
 ```bash
-ankiview view -c /path/to/collection.anki2 1234567890
+ankiview -c /path/to/collection.anki2 view 1234567890
 ```
 
 Specify an Anki profile:
 
 ```bash
-ankiview view -p "User 1" 1234567890
+ankiview -p "User 1" view 1234567890
 ```
 
 ### Delete a note
@@ -64,20 +62,21 @@ ankiview delete 1234567890
 
 **Warning:** Deletion is permanent and will remove the note and all associated cards from your collection.
 
-All flags work with delete as well:
+Global flags work with all commands:
 
 ```bash
-ankiview delete -c /path/to/collection.anki2 1234567890
-ankiview delete -p "User 1" 1234567890
+ankiview -c /path/to/collection.anki2 delete 1234567890
+ankiview -p "User 1" delete 1234567890
 ```
 
 ### Debug logging
 
-Enable debug logging for any command:
+Enable debug logging for any command (global flags can appear before or after subcommand):
 
 ```bash
-ankiview -v delete 1234567890    # DEBUG level
-ankiview -vv view 1234567890     # TRACE level
+ankiview -v delete 1234567890      # DEBUG level
+ankiview -vv view 1234567890       # TRACE level
+ankiview delete -v 1234567890      # Also works
 ```
 
 ## How It Works 🔧

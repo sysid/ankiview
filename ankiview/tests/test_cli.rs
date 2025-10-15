@@ -2,27 +2,13 @@ use ankiview::cli::args::{Args, Command};
 use clap::Parser;
 
 #[test]
-fn given_note_id_only_when_parsing_then_defaults_to_view() {
+fn given_no_subcommand_when_parsing_then_fails() {
     // Arrange
     let args = vec!["ankiview", "1234567890"];
 
-    // Act
-    let parsed = Args::try_parse_from(args).unwrap();
-    let command = parsed.resolve_command();
-
-    // Assert
-    match command {
-        Command::View {
-            note_id,
-            collection,
-            profile,
-        } => {
-            assert_eq!(note_id, 1234567890);
-            assert_eq!(collection, None);
-            assert_eq!(profile, None);
-        }
-        _ => panic!("Expected View command"),
-    }
+    // Act & Assert
+    let result = Args::try_parse_from(args);
+    assert!(result.is_err(), "Should fail without subcommand");
 }
 
 #[test]
@@ -34,18 +20,14 @@ fn given_explicit_view_command_when_parsing_then_succeeds() {
     let parsed = Args::try_parse_from(args).unwrap();
 
     // Assert
-    match parsed.command.unwrap() {
-        Command::View {
-            note_id,
-            collection,
-            profile,
-        } => {
+    match parsed.command {
+        Command::View { note_id } => {
             assert_eq!(note_id, 1234567890);
-            assert_eq!(collection, None);
-            assert_eq!(profile, None);
         }
         _ => panic!("Expected View command"),
     }
+    assert_eq!(parsed.collection, None);
+    assert_eq!(parsed.profile, None);
 }
 
 #[test]
@@ -57,23 +39,78 @@ fn given_delete_command_when_parsing_then_succeeds() {
     let parsed = Args::try_parse_from(args).unwrap();
 
     // Assert
-    match parsed.command.unwrap() {
-        Command::Delete {
-            note_id,
-            collection,
-            profile,
-        } => {
+    match parsed.command {
+        Command::Delete { note_id } => {
             assert_eq!(note_id, 1234567890);
-            assert_eq!(collection, None);
-            assert_eq!(profile, None);
         }
         _ => panic!("Expected Delete command"),
     }
+    assert_eq!(parsed.collection, None);
+    assert_eq!(parsed.profile, None);
 }
 
 #[test]
-fn given_delete_with_collection_flag_when_parsing_then_succeeds() {
+fn given_global_collection_flag_when_parsing_then_succeeds() {
     // Arrange
+    let args = vec![
+        "ankiview",
+        "-c",
+        "/path/to/collection.anki2",
+        "delete",
+        "1234567890",
+    ];
+
+    // Act
+    let parsed = Args::try_parse_from(args).unwrap();
+
+    // Assert
+    match parsed.command {
+        Command::Delete { note_id } => {
+            assert_eq!(note_id, 1234567890);
+        }
+        _ => panic!("Expected Delete command"),
+    }
+    assert_eq!(
+        parsed.collection,
+        Some(std::path::PathBuf::from("/path/to/collection.anki2"))
+    );
+    assert_eq!(parsed.profile, None);
+}
+
+#[test]
+fn given_global_profile_flag_when_parsing_then_succeeds() {
+    // Arrange
+    let args = vec!["ankiview", "-p", "User 1", "view", "1234567890"];
+
+    // Act
+    let parsed = Args::try_parse_from(args).unwrap();
+
+    // Assert
+    match parsed.command {
+        Command::View { note_id } => {
+            assert_eq!(note_id, 1234567890);
+        }
+        _ => panic!("Expected View command"),
+    }
+    assert_eq!(parsed.collection, None);
+    assert_eq!(parsed.profile, Some("User 1".to_string()));
+}
+
+#[test]
+fn given_verbose_flag_when_parsing_then_increments_count() {
+    // Arrange
+    let args = vec!["ankiview", "-vv", "view", "1234567890"];
+
+    // Act
+    let parsed = Args::try_parse_from(args).unwrap();
+
+    // Assert
+    assert_eq!(parsed.verbose, 2);
+}
+
+#[test]
+fn given_collection_flag_after_subcommand_when_parsing_then_succeeds() {
+    // Arrange - global flags work anywhere when marked as global
     let args = vec![
         "ankiview",
         "delete",
@@ -86,54 +123,14 @@ fn given_delete_with_collection_flag_when_parsing_then_succeeds() {
     let parsed = Args::try_parse_from(args).unwrap();
 
     // Assert
-    match parsed.command.unwrap() {
-        Command::Delete {
-            note_id,
-            collection,
-            profile,
-        } => {
+    match parsed.command {
+        Command::Delete { note_id } => {
             assert_eq!(note_id, 1234567890);
-            assert_eq!(
-                collection,
-                Some(std::path::PathBuf::from("/path/to/collection.anki2"))
-            );
-            assert_eq!(profile, None);
         }
         _ => panic!("Expected Delete command"),
     }
-}
-
-#[test]
-fn given_view_with_profile_flag_when_parsing_then_succeeds() {
-    // Arrange
-    let args = vec!["ankiview", "view", "-p", "User 1", "1234567890"];
-
-    // Act
-    let parsed = Args::try_parse_from(args).unwrap();
-
-    // Assert
-    match parsed.command.unwrap() {
-        Command::View {
-            note_id,
-            collection,
-            profile,
-        } => {
-            assert_eq!(note_id, 1234567890);
-            assert_eq!(collection, None);
-            assert_eq!(profile, Some("User 1".to_string()));
-        }
-        _ => panic!("Expected View command"),
-    }
-}
-
-#[test]
-fn given_verbose_flag_when_parsing_then_increments_count() {
-    // Arrange
-    let args = vec!["ankiview", "-vv", "1234567890"];
-
-    // Act
-    let parsed = Args::try_parse_from(args).unwrap();
-
-    // Assert
-    assert_eq!(parsed.verbose, 2);
+    assert_eq!(
+        parsed.collection,
+        Some(std::path::PathBuf::from("/path/to/collection.anki2"))
+    );
 }

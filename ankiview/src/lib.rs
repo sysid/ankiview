@@ -16,50 +16,22 @@ use tracing::{debug, info};
 pub fn run(args: Args) -> Result<()> {
     debug!(?args, "Starting ankiview with arguments");
 
-    // Resolve command (handles backward compatibility)
-    let command = args.resolve_command();
-    debug!(?command, "Resolved command");
-
-    // Route to appropriate handler based on command
-    match command {
-        Command::View {
-            note_id,
-            collection,
-            profile,
-        } => {
-            let collection_path =
-                resolve_collection_path(collection, args.collection, profile, args.profile)?;
-            handle_view_command(note_id, collection_path)
-        }
-        Command::Delete {
-            note_id,
-            collection,
-            profile,
-        } => {
-            let collection_path =
-                resolve_collection_path(collection, args.collection, profile, args.profile)?;
-            handle_delete_command(note_id, collection_path)
-        }
-    }
-}
-
-fn resolve_collection_path(
-    cmd_collection: Option<PathBuf>,
-    args_collection: Option<PathBuf>,
-    cmd_profile: Option<String>,
-    args_profile: Option<String>,
-) -> Result<PathBuf> {
-    // Priority: command flags > top-level flags
-    match cmd_collection.or(args_collection) {
+    // Resolve collection path from global flags
+    let collection_path = match args.collection {
         Some(path) => {
             debug!(?path, "Using provided collection path");
-            Ok(path)
+            path
         }
         None => {
-            let prof = cmd_profile.or(args_profile);
-            debug!(?prof, "Finding collection path for profile");
-            find_collection_path(prof.as_deref())
+            debug!(?args.profile, "Finding collection path for profile");
+            find_collection_path(args.profile.as_deref())?
         }
+    };
+
+    // Route to appropriate handler based on command
+    match args.command {
+        Command::View { note_id } => handle_view_command(note_id, collection_path),
+        Command::Delete { note_id } => handle_delete_command(note_id, collection_path),
     }
 }
 
