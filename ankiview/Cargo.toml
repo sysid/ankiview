@@ -27,6 +27,9 @@ thiserror = "2.0.11"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 
+[[bin]]
+name = "build_test_collection"
+path = "tests/fixtures/build_test_collection.rs"
 
 [profile.release]
 codegen-units = 1

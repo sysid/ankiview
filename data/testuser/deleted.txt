@@ -1,0 +1,1252 @@
+nid	mid	fields
+1695797540373	1686497988937	<p>Explain stack-based DFS algorithm for tree.</p>	<h2>Stack-Based Depth-First Search (DFS) for Tree Traversal</h2><p>eliminates the need for recursion by using an explicit stack data structure to keep track of nodes to visit.
+This is particularly useful in scenarios where recursion is expensive in terms of memory or computational overhead.</p><h3>Algorithm Steps:</h3><ol><li>Create an empty stack and push the root node onto the stack.</li><li>While the stack is not empty:<ol><li>Pop the top node from the stack and process it (e.g., print its value).</li><li>Push the right child of the popped node onto the stack if it exists.</li><li>Push the left child of the popped node onto the stack if it exists.</li></ol></li></ol><pre><code class="language-python">class Node:
+    def __init__(self, value):
+        self.value = value
+        self.left = None
+        self.right = None
+# Pre-Order
+def dfs_tree_stack(root):
+    if root is None:
+        return
+    stack = [root]
+    while stack:
+        current_node = stack.pop()
+        print(current_node.value)  # Process the current node
+        if current_node.right:
+            stack.append(current_node.right)  # Push right child if exists
+        if current_node.left:
+            stack.append(current_node.left)  # Push left child if exists
+# In-Order
+def dfs_in_order_stack(root):
+    if root is None:
+        return
+    stack = []
+    current = root
+    while stack or current:
+        while current:
+            stack.append(current)  # Push current node
+            current = current.left  # Move to left child
+        current = stack.pop()  # Pop the top item
+        print(current.value)  # Process the current node
+        current = current.right  # Move to right child
+# Post-Order
+def dfs_post_order_stack(root):
+    if root is None:
+        return
+    stack = []
+    # ensure that a node's right subtree is processed before the node itself.
+    # The node is only processed (popped and printed) when either it has no right child, or its right child has already been processed
+    last_node_visited = None
+    current = root
+    while stack or current:
+        if current:
+            stack.append(current)  # Push current node
+            current = current.left  # Move to left child
+        else:
+            peek_node = stack[-1]
+            # Check if right child exists and is unvisited
+            if peek_node.right and last_node_visited != peek_node.right:
+                current = peek_node.right
+            else:
+                last_node_visited = stack.pop()  # Pop the top item
+                print(last_node_visited.value)  # Process the current node</code></pre><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/algo/algorithms.md</span></p>
+1695797540374	1686497988937	<p>Explain pre-order vs. in-order vs. post-order in tree traversal.</p>	<p>In binary trees, there are three common methods of traversal: pre-order, in-order, and post-order</p><ol><li><strong>Pre-order Traversal</strong>: Visit the current node before its child nodes. The order is: Node, Left, Right.</li><li><strong>In-order Traversal</strong>: Visit the left child, then the current node, and finally the right child. The order is: Left, Node, Right.</li><li><strong>Post-order Traversal</strong>: Visit the child nodes before the current node. The order is: Left, Right, Node.</li></ol><pre><code class="language-python">class Node:
+    def __init__(self, value):
+        self.value = value
+        self.left = None
+        self.right = None
+
+def preorder_traversal(node):
+    if node:
+        print(node.value, end=' ')
+        preorder_traversal(node.left)
+        preorder_traversal(node.right)
+
+def inorder_traversal(node):
+    if node:
+        inorder_traversal(node.left)
+        print(node.value, end=' ')
+        inorder_traversal(node.right)
+
+def postorder_traversal(node):
+    if node:
+        postorder_traversal(node.left)
+        postorder_traversal(node.right)
+        print(node.value, end=' ')
+
+# Example tree
+#     1
+#    / \
+#   2   3
+#  / \
+# 4   5
+
+root = Node(1)
+root.left = Node(2)
+root.right = Node(3)
+root.left.left = Node(4)
+root.left.right = Node(5)
+
+print("Pre-order Traversal: ")
+preorder_traversal(root)  # Output: 1 2 4 5 3
+
+print("\nIn-order Traversal: ")
+inorder_traversal(root)  # Output: 4 2 5 1 3
+
+print("\nPost-order Traversal: ")
+postorder_traversal(root)  # Output: 4 5 2 3 1</code></pre><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/algo/algorithms.md</span></p>
+1699599187787	1686497988937	<p>What is Polymorphism?</p>	<ul><li><p>objects of different classes can be treated as objects of a common superclass, allowing for a single interface to control access to the different underlying forms of those objects</p></li><li><p>the notion that you can define a single interface with multiple underlying implementations.</p></li><li><p>foundation of dependency inversion</p></li></ul><p><span style="font-size: 9pt;">File: /Users/tw/dev/s/private/vimwiki/dev/OOP.md</span></p>
+1700896496025	1686497988937	<p>Explain Change Data Capture (CDC):</p>	<p>is a software design pattern used to efficiently track changes in data in a database system.</p><ol><li><p><strong>Purpose</strong>: CDC aims to identify and capture changes made to the data in a database, such as inserts, updates, and deletes.</p></li><li><p><strong>Process</strong>:</p><ul><li><strong>Capture Changes</strong>: CDC systems monitor data sources (like databases) for changes.</li><li><strong>Record Changes</strong>: These changes are then recorded and stored, often in a change log or a separate data store.</li><li><strong>Propagate Changes</strong>: The recorded changes can be used to update data warehouses, analytics systems, or other databases.</li></ul></li><li><p><strong>Techniques</strong>:</p><ul><li><strong>Triggers</strong>: Database triggers are used to log changes in real-time.</li><li><strong>Log-Based</strong>: Reading database logs (like transaction logs) to extract changes.</li><li><strong>Polling/Snapshot</strong>: Regularly querying the database to detect changes.</li></ul></li><li><p><strong>Benefits</strong>:</p><ul><li><strong>Real-Time Data Processing</strong>: Allows for near real-time data integration and analysis.</li><li><strong>Minimizes Load on Source Systems</strong>: Reduces the need for frequent, heavy queries.</li><li><strong>Data Consistency and Accuracy</strong>: Ensures that downstream systems are synchronized with source data.</li><li><strong>Can Caputre Deletes</strong>:  polling will not allow you to identify any records that have been deleted since the last poll</li></ul></li><li><p><strong>Use Cases</strong>:</p><ul><li><strong>Data Warehousing</strong>: Updating data warehouses with the latest data.</li><li><strong>Data Replication</strong>: Synchronizing data across different systems.</li><li><strong>Real-Time Analytics</strong>: Providing up-to-date data for analytics.</li></ul></li></ol><p>CDC is a key component in modern data architectures, particularly in systems that require high levels of data freshness and accuracy for real-time decision-making.<a href="https://debezium.io/blog/2018/07/19/advantages-of-log-based-change-data-capture/">Five Advantages of Log-Based Change Data Capture</a></p><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/event_driven.md</span></p>
+1705384410662	1686497988937	<p>Explain Ring Buffer:</p>	<ul><li>ring buffer, circular queue, ring array, is a data structure that uses a single, fixed-size buffer as if it were connected end-to-end.</li><li>This structure lends itself to buffering data streams, where the data comes in chunks and is processed in a similar manner.</li><li>Used in situations where the memory is limited and only a fixed number of the most recent items are needed, such as in embedded systems, audio/video streaming, or real-time data processing.</li></ul><h3>Key Characteristics:</h3><ol><li><strong>Fixed Size</strong>:</li><li><strong>Sequential Storage</strong>: Data is stored in a sequential manner, typically in an array.</li><li><strong>Circular Wrapping</strong>: When the end of the buffer is reached, new data wraps back to the beginning of the buffer.</li><li><strong>Two Pointers/Index</strong>: Typically, there are two pointers or indices used in a ring buffer: one for reading data and one for writing data.</li></ol><h3>Working Mechanism:</h3><ul><li><strong>Write Operation</strong>: When writing data, the write pointer/index is advanced. If it reaches the end of the buffer, it wraps around to the beginning.</li><li><strong>Read Operation</strong>: Data is read by advancing the read pointer/index in a similar fashion.</li><li><strong>Buffer Full Condition</strong>: The buffer is considered full when the write pointer is about to overlap the read pointer.</li><li><strong>Buffer Empty Condition</strong>: The buffer is empty when the read and write pointers are at the</li></ul><h3>difference to fifo queue</h3><ul><li>overflow condition: can overwrite old data</li></ul><pre><code class="language-python">class RingBuffer:
+    def __init__(self, size):
+        self.size = size
+        self.buffer = [None] * size
+        self.write_pos = 0
+        self.read_pos = 0
+
+    def is_full(self):
+        next_write_pos = (self.write_pos + 1) % self.size
+        return next_write_pos == self.read_pos
+
+    def is_empty(self):
+        return self.write_pos == self.read_pos
+
+    def write(self, item):
+        self.buffer[self.write_pos] = item
+        self.write_pos = (self.write_pos + 1) % self.size
+
+    def read(self):
+        item = self.buffer[self.read_pos]
+        self.read_pos = (self.read_pos + 1) % self.size
+        return item
+
+# Example usage
+buffer = RingBuffer(5)
+
+# Write data to the buffer
+for i in range(1, 6):
+    buffer.write(i)
+
+# Read data from the buffer
+for _ in range(5):
+    print(buffer.read())</code></pre><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/algo/algorithms.md</span></p>
+1706855598821	1686497988937	<p>Explain &quot;at-least-once&quot; semantic of queue:</p>	<p>If I have a message for you, I will read it to you, and keep doing so again and again until you acknowledge it.
+when you receive a message from the queue and don't delete/acknowledge it, you will receive it again in the future, and will keep receiving it until you explicitly delete/acknowledge it.
+If the queuing system restarts before it can properly keep track of what's been sent to you, the message will be sent again.
+This simple remedy of sending the message again in case of any problem on any side is what makes this guarantee so reliable.</p><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/queues.md</span></p>
+1711518761236	1686497988937	<p>Explain pointers:</p>	<ul><li>variable that holds the address of something else</li><li>use it to work with that something else.</li></ul><pre><code class="language-bash">myvar = SOMETHING;
+mypointer = get_address_of(myvar);
+print(get_value_via_pointer(mypointer));
+## output is SOMETHING</code></pre><ul><li>useful because we can use a pointer to refer to data, setting in one part of the code with whatever logic we need to decide what data it should point to.</li><li>Then elsewhere we can use the pointer without having to know what it's referring to or how the decision was made.</li><li>The pointer gives us an indirection that lets us separate concerns and write more modular code.</li></ul><pre><code class="language-c">int myvar = 17;
+int *mypointer = &amp;myvar;  // declares mypointer as a pointer to an int (C)
+print_int(*mypointer);      // outputs 17</code></pre><p>pointers must be declared with the <code>* syntax (int *pointerName)</code>, and they store memory addresses.
+to access the value stored at the address a pointer is pointing to, use dereference operator <code>*</code> again (e.g., <code>*pointerName</code>).</p><h3>References (<code>&amp;T</code> and <code>&amp;mut T</code>)</h3><ul><li><p><strong>Safety</strong>: References are always safe to use because borrow checker ensures that they point to valid memory, preventing dangling references and ensuring that either multiple immutable references or a single mutable reference can exist at the same time, but not both.</p></li><li><p><strong>Lifetimes</strong>: References in Rust have lifetimes, which are compile-time annotations that specify the scope for which the reference is valid. Lifetimes prevent dangling references by ensuring that references do not outlive the data they point to.</p></li><li><p><strong>Syntax and Usage</strong>: <code>&amp;</code> to borrow a value, <code>*</code> to dereference</p></li></ul><pre><code class="language-rust">fn main() {
+    let myvar: i32 = 17;
+    let mypointer: &amp;i32 = &amp;myvar;  // declares mypointer as a reference to an int
+
+    println!("{}", *mypointer);
+}</code></pre><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/algo/algorithms.md</span></p>
+1715673437739	1686497988937	<p>What is an algebraic type?</p>	<p>An algebraic type is a composite type that is formed by combining other types. An Algebraic Data Type (ADT) is a type formed by combining other types (just a bundle of data)</p><ol><li><p><strong>Product Types</strong>: These are types formed by combining multiple values from other types. An example in many programming languages is a struct or a class, which can contain multiple fields of different types. In a product type, the total number of possible values is the product of the number of possible values of its constituent types.</p><ul><li>combines types by AND (all types must be present).</li><li>dataclass is a good example of a product type.</li><li>It's a class where the data members are simply other types
+A Python class is a more general concept than a product ADT. While a product ADT is used specifically to bundle multiple values together, a class in Python can have methods (functions), properties, inheritance, and other features. A class can be used to create complex objects with behavior, not just data.</li></ul></li><li><p><strong>Sum Types (Union Types)</strong>: These are types where a value can be one of several types but not simultaneously. They are called "sum types" because the total number of possible values is the sum of the number of possible values from its constituent types. The term "union" in union types is often used in languages like C and Rust, where it represents a type that may hold data from different types, but only one type at a time.</p><ul><li>combines types by OR (one of the types must be present).</li><li>bool is the quintessential sum type in Python, being logically equivalent to a union of two singletons, True and False.</li><li>Barring bool, Python sum types come in the form of enums, literals or unions.</li></ul></li></ol><p>In summary, a union is considered an algebraic type (specifically a sum type) because it is formed by combining multiple types in a way that the resulting type can take a value that is one of its constituent types. The algebraic nature of these types comes from the way they are formed using operations analogous to those in algebra (sum for sum types, product for product types).</p><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/help/mypy.md</span></p>
+1724482677282	1686497988937	<p>Explain RAII:</p>	<h3>Resource Acquisition Is Initialization (RAII) in Rust</h3><ul><li>ties the lifecycle of resources to the lifecycle of objects that manage those resources.</li><li>when an object is created (initialized), it acquires resources. These resources are tied to the lifetime of the object. When the object goes out of scope (is destroyed), its destructor (in Rust, this is managed by the <code>Drop</code> trait) automatically releases those resources.</li><li>In Rust, resource management is tightly integrated with Rust's ownership and borrowing system.</li></ul><p>Example where a file is opened and closed using RAII:</p><pre><code class="language-rust">use std::fs::File;
+use std::io::{self, Write, Read};
+
+struct FileWrapper {
+    file: File,
+}
+
+impl FileWrapper {
+    fn new(filename: &amp;str) -&gt; io::Result&lt;FileWrapper&gt; {
+        let file = File::open(filename)?;
+        Ok(FileWrapper { file })
+    }
+}
+
+impl Drop for FileWrapper {
+    fn drop(&amp;mut self) {
+        // The file will be automatically closed when the struct goes out of scope
+        // No explicit cleanup is needed in this case because the File type implements Drop
+        println!("File is being closed automatically");
+    }
+}
+
+fn process_file(filename: &amp;str) -&gt; io::Result&lt;()&gt; {
+    let mut file_wrapper = FileWrapper::new(filename)?;
+
+    let mut contents = String::new();
+    file_wrapper.file.read_to_string(&amp;mut contents)?;
+    println!("File content: {}", contents);
+
+    // The file is automatically closed here when file_wrapper goes out of scope
+    Ok(())
+}
+
+fn main() {
+    if let Err(e) = process_file("example.txt") {
+        eprintln!("An error occurred: {}", e);
+    }
+}</code></pre><h3>Why is RAII Beneficial?</h3><ol><li><p><strong>Automatic Resource Management</strong>:</p><ul><li>RAII ensures that resources are automatically released when they are no longer needed, reducing the risk of resource leaks (e.g., memory leaks, open file descriptors).</li><li>reduces boilerplate code for resource management, making the code cleaner and easier to maintain.</li></ul></li><li><p><strong>Exception Safety (Panic Safety in Rust)</strong>:</p><ul><li>If a panic happens, Rust's ownership model ensures that destructors (via the <code>Drop</code> trait) are still called, ensuring that resources are released properly.</li><li>This makes code more robust, as resources are not leaked even when errors or panics occur.</li></ul></li><li><p><strong>Improved Reliability and Safety</strong>:</p><ul><li>By centralizing resource management in constructors and destructors, RAII reduces bugs related to improper resource handling, such as double-free errors or use-after-free errors.</li></ul></li></ol><h3>Python:</h3><p>Python's <code>with</code> statement and context managers provide a similar mechanism for managing resources automatically.</p><h3>Java</h3><p>The closest concept to RAII in Java is <strong>try-with-resources</strong> statement</p><ul><li>Resources such as files, streams, or database connections that implement the <code>AutoCloseable</code> interface can be declared in a <code>try-with-resources</code> statement.</li><li>When the block is exited, either normally or due to an exception, the <code>close()</code> method of the resource is automatically called, ensuring that the resource is released.</li></ul><h4>Example:</h4><pre><code class="language-java">import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
+public class FileReaderExample {
+    public static void main(String[] args) {
+        try (BufferedReader reader = new BufferedReader(new FileReader("example.txt"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        // No need to explicitly close the reader; it's done automatically.
+    }
+}</code></pre><h3>Comparison with RAII in Rust</h3><p>explicit in Java (through syntax), whereas in Rust, it's implicit via the <code>Drop</code> trait and ownership model.
+Both Rust (via RAII and the <code>Drop</code> trait) and Java (via try-with-resources) ensure that resources are cleaned up even if an error occurs.</p><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/rust-reference.md</span></p>
+1746867058129	1686497988937	<p>Explain Float Precision</p>	<p><code>float</code> typically follows the IEEE 754 <strong>32-bit single-precision</strong> standard.</p><ul><li><strong>approximately 6 to 7 decimal digits of precision</strong>: means roughly how many digits are <em>accurately retained</em>, not <em>exact representability</em>.</li><li>This refers to the <strong>number of significant decimal digits</strong>, not fixed digits after the decimal point.</li><li>Many decimal numbers — even short ones — <strong>do not have an exact binary equivalent</strong>.</li></ul><pre><code class="language-python">f = float("0.1")
+print(f"{f:.17f}")
+
+0.10000000149011612</code></pre><p>Even <code>0.1</code> is already rounded in binary.</p><h3>Details (IEEE 754 float):</h3><p>A 32-bit <code>float</code> has:</p><ul><li>1 bit for sign</li><li>8 bits for exponent</li><li>23 bits for mantissa (significand)
+→ which gives <strong>24 bits of precision</strong> (including the implicit leading bit)</li></ul><p>That’s <strong>exactly</strong> about <strong>7.22 decimal digits</strong> (<code>log10(2^24) ≈ 7.22</code>).</p><ul><li>The <strong>precise binary precision</strong> is known: <strong>24 bits</strong></li><li>The <strong>decimal digit precision</strong> is <strong>not exact</strong> due to base conversion (binary to decimal)</li></ul><h3>1. <strong>Binary vs Decimal Precision</strong></h3><ul><li>6 decimal digits: <strong>safe precision</strong> — round-trip guarantees</li><li>7 decimal digits: <strong>maximum usable precision</strong> — may include rounding artifacts</li><li>7 digits is a theoretical max; 6 is practically safe</li></ul><h3>Example (Python):</h3><pre><code class="language-python">f = float(1.123456789)
+print(f)
+
+1.123456789  # may appear unchanged, but internal precision is ~7 digits</code></pre><h3>For Higher Precision:</h3><ul><li><code>double</code> (64-bit, ~15-17 decimal digits)</li><li><code>decimal.Decimal</code> in Python (arbitrary precision)</li><li><code>BigDecimal</code> in Java</li></ul><p><strong>Significant digits</strong> are the digits that carry meaning in a number -- they represent its precision.</p><ul><li><code>123456</code> -&gt; 6 significant digits</li><li><code>0.00123456</code> -&gt; also 6 significant digits (leading zeros don't count)</li><li><code>123456000</code> -&gt; may still be 6 significant digits, depending on how many trailing zeros are meaningful</li></ul><pre><code class="language-python">f = float("0.1234567")
+print(f"{f:.17f}")
+
+0.12345670163631439</code></pre><p>Notice the <strong>inexact representation</strong> — even though you gave exactly 7 decimal digits, the float cannot represent <code>0.1234567</code> precisely.</p><h3>Example 2: <code>1.0000001</code></h3><pre><code class="language-python">f = float("1.0000001")
+print(f"{f:.17f}")
+1.00000011920928955</code></pre><p><img src="float-example.png" alt="float-example"></p><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/development.md</span></p>
+1748163225597	1686497988937	<p>When to use Graph versus DAG?</p>	<ul><li><strong>Use a DAG</strong> when you need a strict ordering without cycles (e.g., scheduling, build systems, dependency resolution).<ul><li>Cycles break these problems by creating contradictions.</li></ul></li><li><strong>Use a general graph</strong> when modeling systems with mutual relationships, feedback, or cycles (e.g., networks, social graphs, control systems).</li></ul><ul><li>Execution control becomes harder--deadlocks and infinite loops are risks.</li></ul><h4><strong>Graph (General)</strong></h4><p>A graph is a collection of nodes (vertices) connected by edges (which can be directed or undirected).</p><ul><li><strong>Cycles</strong> are allowed (a path that starts and ends at the same node).</li><li><strong>General</strong> in structure--can represent any kind of relationship.</li></ul><h4><strong>DAG (Directed Acyclic Graph)</strong></h4><p>A <strong>DAG</strong> is a <strong>directed</strong> graph with <strong>no cycles</strong>.</p><ul><li><strong>Acyclicity</strong> ensures no circular dependencies.</li><li><strong>Partial ordering</strong>: nodes can be topologically sorted (some order where every node appears before its dependents).<ul><li>Steps are ordered without cycles, making it simple to ensure that dependencies are met.</li></ul></li></ul><h3><strong>Problem Classes Solvable with DAGs but Not with General Graphs</strong></h3><p>DAGs solve problems where <strong>dependency order matters</strong> and <strong>cycles must be avoided</strong>:</p><ul><li><strong>Task scheduling with dependencies</strong> (e.g., build systems, compute engines)<ul><li>If there's a cycle (task depends on itself through other tasks), it's unsolvable.</li></ul></li><li><strong>Topological sorting</strong> (e.g., order of courses with prerequisites).<ul><li>Only defined for DAGs.</li></ul></li><li><strong>Dataflow processing</strong> (e.g., streaming computation, pipelines).<ul><li>Cycles would imply infinite loops.</li></ul></li><li><strong>Version control history</strong> (e.g., Git DAG of commits).</li></ul><p>These problems <strong>fail</strong> in a general graph because:</p><ul><li>Cycles mean there's no consistent ordering or termination.</li><li>You can't establish an "all dependencies fulfilled" point.</li></ul><h3><strong>Problem Classes Solvable with Graphs (Including Cycles) but Not with DAGs</strong></h3><p>Graphs with cycles represent problems where <strong>feedback or mutual relationships</strong> are essential:</p><ul><li><strong>Network routing</strong> (e.g., finding shortest/optimal paths in a network).<ul><li>Real networks often contain cycles for redundancy.</li></ul></li><li><strong>Social networks</strong> (e.g., mutual friendships, complex relationships).</li><li><strong>State machines with loops</strong> (e.g., workflows with retry logic or infinite processes).</li><li><strong>Feedback control systems</strong> (e.g., signal processing, control loops).</li></ul><h3><strong>Summary Table</strong></h3><table><thead><tr>  <th><strong>Feature</strong></th>  <th><strong>DAG</strong></th>  <th><strong>General Graph</strong></th></tr></thead><tbody><tr>  <td>Cycles</td>  <td>Forbidden</td>  <td>Allowed</td></tr><tr>  <td>Topological ordering</td>  <td>Possible</td>  <td>Not possible (if cycles)</td></tr><tr>  <td>Suitable for dependencies</td>  <td>Yes</td>  <td>No (cycles create deadlocks)</td></tr><tr>  <td>Suitable for mutual relationships</td>  <td>No</td>  <td>Yes</td></tr></tbody></table><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/algo/algorithms.md</span></p>
+1748163225601	1686497988937	<p>why is it easier to determine whether dependencies are met with DAG rather than a Graph?</p>	<h3><strong>Why is determining "dependencies are met" easier with a DAG than with a general graph?</strong></h3><ul><li><p>A <strong>DAG (Directed Acyclic Graph)</strong> has <strong>no cycles</strong>. This means:</p><ul><li>You can always assign a <strong>partial order</strong> to nodes: if A depends on B, then B must be executed before A.</li><li>This structure guarantees that <strong>dependencies flow in one direction</strong>, and you can't get stuck in an infinite loop.</li><li><strong>Topological sorting</strong> is possible: you can list nodes in an order where all dependencies are met.</li></ul></li><li><p>A <strong>general graph</strong> can have <strong>cycles</strong> (loops of dependencies):</p><ul><li>It's possible for nodes to <strong>mutually depend on each other</strong>.</li><li>This means a node might depend on another node which, directly or indirectly, depends on it--creating a <strong>deadlock</strong>.</li><li>In such cases, you can't determine an execution order that satisfies all dependencies.</li></ul></li></ul><h3><strong>2. Determining Dependencies in a DAG</strong></h3><p>With a DAG, you can:</p><ul><li><p><strong>Track each node's in-degree</strong> (number of incoming edges, i.e., how many dependencies are left to satisfy).</p></li><li><p>Start with nodes with <strong>in-degree 0</strong> (no unmet dependencies).</p></li><li><p>As you execute nodes, you decrement the in-degree of their dependents.</p></li><li><p>When a node's in-degree reaches 0, it's ready to execute.</p></li><li><p>This approach ensures:</p><ul><li>You never get stuck in a cycle.</li><li>Execution proceeds as soon as dependencies are met.</li></ul></li></ul><p>This method is <strong>safe and efficient</strong> because a DAG guarantees:</p><ul><li><strong>No circular dependencies</strong>.</li><li><strong>At least one node with no incoming edges</strong> (entry point).</li></ul><h3><strong>3. In a General Graph (with Cycles)</strong></h3><ul><li><strong>Cycles break this approach</strong>. If nodes mutually depend on each other:<ul><li>Every node in the cycle could have <strong>non-zero in-degree</strong>.</li><li>You can't determine which node to start with because all are waiting for each other.</li><li>There's no guaranteed ordering that satisfies all dependencies.</li></ul></li></ul><p>This can lead to:</p><ul><li><strong>Deadlocks</strong> (if dependencies form a cycle).</li><li><strong>Infinite loops</strong> (if your algorithm keeps trying to resolve dependencies).</li></ul><p>To handle this, you'd need:</p><ul><li><strong>Cycle detection</strong> (e.g., Tarjan's algorithm), to identify and handle (or break) cycles.</li><li><strong>Complex logic</strong> to resolve cycles--whereas a DAG inherently avoids this issue.</li></ul><table><thead><tr>  <th><strong>Aspect</strong></th>  <th><strong>DAG</strong></th>  <th><strong>General Graph</strong></th></tr></thead><tbody><tr>  <td>Cycles</td>  <td>Forbidden</td>  <td>Allowed (possible mutual dependencies)</td></tr><tr>  <td>Topological order</td>  <td>Always possible</td>  <td>Impossible if cycles exist</td></tr><tr>  <td>Dependency tracking</td>  <td>In-degree approach, simple and efficient</td>  <td>Needs cycle detection and complex logic</td></tr><tr>  <td>Risk of deadlocks</td>  <td>None</td>  <td>High, if cycles exist</td></tr><tr>  <td>Execution ordering</td>  <td>Deterministic</td>  <td>Unclear if cycles exist</td></tr></tbody></table><h3><strong>Conclusion</strong></h3><p><strong>DAGs</strong> make it easy to determine if a node's dependencies are satisfied because:</p><ul><li>Each node's dependencies are finite and acyclic.</li><li>The structure guarantees <strong>no circular waiting</strong>.</li><li>A simple <strong>in-degree tracking</strong> system works.</li></ul><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/algo/algorithms.md</span></p>
+1732086221265	1686497988937	<p>How does a Kafka message look like?</p>	<h3><strong>Kafka Message Structure</strong></h3><table><thead><tr>  <th><strong>Field</strong></th>  <th><strong>Description</strong></th></tr></thead><tbody><tr>  <td><strong>Key</strong></td>  <td>An optional key associated with the message, used for partitioning.</td></tr><tr>  <td><strong>Value</strong></td>  <td>The actual data or payload of the message.</td></tr><tr>  <td><strong>Timestamp</strong></td>  <td>The timestamp associated with the message.</td></tr><tr>  <td><strong>Headers</strong></td>  <td>Optional key-value pairs for additional metadata.</td></tr><tr>  <td><strong>Partition</strong></td>  <td>The partition where the message resides.</td></tr><tr>  <td><strong>Offset</strong></td>  <td>The position of the message in the partition.</td></tr><tr>  <td><strong>Topic</strong></td>  <td>The name of the topic to which the message belongs.</td></tr></tbody></table><h3><strong>Timestamp Details</strong></h3><ul><li>The <strong>timestamp</strong> is an important part of each Kafka message and can have two types:<ol><li><strong>CreateTime</strong>: Set by the producer when the message is created.</li><li><strong>LogAppendTime</strong>: Set by the Kafka broker when the message is appended to the partition.</li></ol></li></ul><h3><strong>Example Kafka Message</strong></h3><p>Here’s an example JSON representation of a Kafka message (though messages are in binary format by default):</p><pre><code class="language-json">{
+  "topic": "example-topic",
+  "partition": 0,
+  "offset": 12345,
+  "timestamp": 1678901234567,
+  "key": "user123",
+  "value": {
+    "eventType": "login",
+    "timestamp": "2023-11-19T12:34:56Z"
+  },
+  "headers": {
+    "traceId": "abcd-1234"
+  }
+}</code></pre><ol><li><strong>From the Producer</strong>: If <code>CreateTime</code> is used, the producer sets the timestamp when sending the message.</li><li><strong>From the Broker</strong>: If <code>LogAppendTime</code> is used, the broker overwrites the timestamp with the time it appends the message to the partition.</li></ol><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/kafka.md</span></p>
+1734591704184	1686497988937	<p>how does map work in Rust <code>Result</code> context?</p>	<ul><li>works only on <code>Ok</code> from Result type, Error passed through:</li></ul><pre><code class="language-rust">    env::var(&quot;HOME&quot;)
+        .map(|home| format!(&quot;{}/xxx/rs-cg&quot;, home))
+        .unwrap_or_else(|_| &quot;/tmp/xxx/rs-cg&quot;.to_string())</code></pre><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/rust-concepts.md</span></p>
+1734591704413	1686497988937	<p>Explain derived traits for structs:</p>	<pre><code class="language-rust">use derive_builder::Builder;
+use serde::{Serialize, Deserialize};
+use getset::{Getters, Setters};
+use derive_more::{Display, From};
+use std::fmt;
+
+#[derive(
+    Debug,          // Allows `{:?}` formatting for debugging.
+    Clone,          // Enables `.clone()` for creating a duplicate.
+    PartialEq, Eq,  // Enables `==` and `!=` for equality comparison.
+    PartialOrd, Ord, // Enables `&lt;`, `&gt;`, `&lt;=`, `&gt;=` for ordering.
+    Hash,           // Allows hashing for use in `HashMap` or `HashSet`.
+    Default,        // Provides a default value with `T::default()`.
+    Serialize,      // Enables serialization to formats like JSON, YAML, etc.
+    Deserialize,    // Enables deserialization from those formats.
+    Builder,        // Generates a builder for the struct.
+    Getters,        // Creates getter methods for struct fields.
+    Setters,        // Creates setter methods for struct fields.
+    Display,        // Enables user-facing string representation.
+    From            // Enables conversion from tuple or compatible structs.
+)]
+pub struct Person {
+    #[getset(get = &quot;pub&quot;, set = &quot;pub&quot;)]
+    name: String,
+    #[getset(get = &quot;pub&quot;, set = &quot;pub&quot;)]
+    age: u8,
+    #[getset(get = &quot;pub&quot;, set = &quot;pub&quot;)]
+    email: String,
+}
+
+fn main() {
+    // Default instance
+    let default_person = Person::default();
+    println!(&quot;{:?}&quot;, default_person);
+
+    // Using the builder
+    let builder_person = PersonBuilder::default()
+        .name(&quot;Alice&quot;.to_string())
+        .age(30)
+        .email(&quot;alice@example.com&quot;.to_string())
+        .build()
+        .unwrap();
+    println!(&quot;{}&quot;, builder_person); // Uses Display trait
+
+    // Using Clone
+    let cloned_person = builder_person.clone();
+    assert_eq!(builder_person, cloned_person); // Uses PartialEq
+}</code></pre><h3><strong>Generated Capabilities</strong></h3><ol><li><p><strong>Default Instance:</strong></p><ul><li><code>Person::default()</code> creates an instance with default field values (e.g., empty strings, <code>0</code> for integers).</li></ul></li><li><p><strong>Builder Pattern:</strong></p><ul><li>Construct instances fluently:<pre><code class="language-rust">PersonBuilder::default()
+    .name(&quot;Alice&quot;.to_string())
+    .age(30)
+    .email(&quot;alice@example.com&quot;.to_string())
+    .build()
+    .unwrap();</code></pre></li></ul></li><li><p><strong>Serialization/Deserialization:</strong></p><ul><li>Convert the struct to/from formats like JSON or YAML:<pre><code class="language-rust">let json = serde_json::to_string(&amp;person).unwrap();
+let deserialized: Person = serde_json::from_str(&amp;json).unwrap();</code></pre></li></ul></li><li><p><strong>Equality and Ordering:</strong></p><ul><li>Compare structs:<pre><code class="language-rust">assert_eq!(person1, person2);
+let ordered = vec![person1, person2].sort();</code></pre></li></ul></li><li><p><strong>Getters and Setters:</strong></p><ul><li>Access or modify fields:<pre><code class="language-rust">println!(&quot;{}&quot;, person.name());
+person.set_name(&quot;Bob&quot;.to_string());</code></pre></li></ul></li><li><p><strong>Display Formatting:</strong></p><ul><li>Use user-friendly string representations:<pre><code class="language-rust">println!(&quot;{}&quot;, person); // Customizable with `Display`</code></pre></li></ul></li></ol><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/rust/core/annotations.md</span></p>
+1734591704479	1686497988937	<p>Explaing logging with <code>tracing</code>:</p>	<h3>1. <strong>Add Dependencies</strong></h3><p>set <code>RUST_LOG</code> !
+Ensure <code>tracing</code> and <code>tracing-subscriber</code> are added to your <code>Cargo.toml</code>:</p><pre><code class="language-toml">[dependencies]
+tracing = &quot;0.1&quot;
+tracing-subscriber = &quot;0.3&quot;</code></pre><h3>2. <strong>Setup Tracing Subscriber</strong></h3><p>Initialize the <code>tracing-subscriber</code> with a formatter that includes span information:</p><pre><code class="language-rust">use tracing_subscriber::fmt;
+
+fn main() {
+    // Initialize a subscriber with span context enabled
+    tracing_subscriber::fmt()
+        .with_env_filter(&quot;info&quot;) // Set log level
+        .with_target(true)       // Include module path
+        .with_thread_names(true) // Include thread names (optional)
+        .init();
+
+    example_function();
+}</code></pre><h3>3. <strong>Use <code>#[instrument]</code> to Capture Method Names</strong></h3><p>Annotate functions with the <code>#[instrument]</code> macro to capture their name in the logs:</p><pre><code class="language-rust">use tracing::{info, instrument};
+
+#[instrument]
+fn example_function() {
+    info!(&quot;This is a log message from the method.&quot;);
+}</code></pre><p>Output:</p><pre><code>INFO tracing_example::example_function: This is a log message from the method.</code></pre><ul><li><code>example_function</code> is the name of the method logged automatically by <code>#[instrument]</code>.</li></ul><h3>4. <strong>Log Method Arguments</strong></h3><p>You can also include method arguments in the logs by leveraging the <code>#[instrument]</code> macro. It automatically logs the values of the arguments:</p><pre><code class="language-rust">use tracing::{info, instrument};
+
+#[instrument]
+fn calculate_sum(a: i32, b: i32) {
+    let result = a + b;
+    info!(&quot;Sum calculated: {}&quot;, result);
+}
+
+fn main() {
+    tracing_subscriber::fmt().with_env_filter(&quot;info&quot;).init();
+    calculate_sum(5, 7);
+}</code></pre><p>Output:</p><pre><code>INFO tracing_example::calculate_sum{a=5, b=7}: Sum calculated: 12</code></pre><h3>5. <strong>Customizing the Subscriber</strong></h3><p>You can customize the format to explicitly include the span information in your log output:</p><pre><code class="language-rust">use tracing_subscriber::fmt::format::FmtSpan;
+
+fn main() {
+    tracing_subscriber::fmt()
+        .with_env_filter(&quot;info&quot;)
+        .with_span_events(FmtSpan::ACTIVE) // Log span entry/exit
+        .init();
+}</code></pre><h3>6. <strong>Manually Adding Spans (Optional)</strong></h3><p>If you want finer control without the <code>#[instrument]</code> macro, you can manually create spans using <code>tracing::span!</code>:</p><pre><code class="language-rust">use tracing::{info, span, Level};
+
+fn main() {
+    tracing_subscriber::fmt().init();
+
+    let span = span!(Level::INFO, &quot;custom_span&quot;, method = &quot;main_function&quot;);
+    let _enter = span.enter(); // Enter the span
+    info!(&quot;Logging within the custom span&quot;);
+}</code></pre><p>Output:</p><pre><code>INFO custom_span{method=main_function}: Logging within the custom span</code></pre><h3><strong>Summary</strong></h3><ul><li>Use <code>#[instrument]</code> to automatically log method names and arguments.</li><li>Customize the <code>tracing-subscriber</code> to format logs with span information.</li><li>For more granular control, use <code>span!</code> to manually define spans.</li></ul><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/rust/core/logging.md</span></p>
+1734591766331	1686497988937	<p>Popular crates for struct traits:</p>	<p>In addition to the built-in traits external crates provide procedural macros to derive commonly needed traits for specific use cases.</p><h3><strong>Popular External Derived Struct Traits</strong></h3><table><thead><tr>  <th><strong>Crate</strong></th>  <th><strong>Trait</strong></th>  <th><strong>Purpose</strong></th></tr></thead><tbody><tr>  <td><strong><code>derive_builder</code></strong></td>  <td><code>Builder</code></td>  <td>Generates a builder pattern for constructing complex structs.</td></tr><tr>  <td><strong><code>serde</code></strong></td>  <td><code>Serialize</code>, <code>Deserialize</code></td>  <td>Provides (de)serialization support for structs and enums to/from formats like JSON or YAML.</td></tr><tr>  <td><strong><code>thiserror</code></strong></td>  <td><code>Error</code></td>  <td>Simplifies error handling by deriving implementations of the <code>std::error::Error</code> trait.</td></tr><tr>  <td><strong><code>num-derive</code></strong></td>  <td><code>FromPrimitive</code>, <code>ToPrimitive</code></td>  <td>Derives conversions between enums and primitive types.</td></tr><tr>  <td><strong><code>strum</code></strong></td>  <td><code>EnumString</code>, <code>Display</code>, <code>AsRefStr</code>, <code>EnumIter</code></td>  <td>Enhances enums with string conversions, iteration, and more.</td></tr><tr>  <td><strong><code>getset</code></strong></td>  <td><code>Getters</code>, <code>Setters</code></td>  <td>Auto-generates getter and setter methods for struct fields.</td></tr><tr>  <td><strong><code>async-trait</code></strong></td>  <td><code>async_trait</code></td>  <td>Allows traits to contain async functions, resolving lifetime and complexity issues.</td></tr><tr>  <td><strong><code>derive_more</code></strong></td>  <td><code>From</code>, <code>Into</code>, <code>Display</code>, etc.</td>  <td>Provides convenient derives for common conversion and formatting traits.</td></tr><tr>  <td><strong><code>enum-as-inner</code></strong></td>  <td><code>EnumAsInner</code></td>  <td>Provides safe accessors for enums with single-value variants.</td></tr><tr>  <td><strong><code>bitflags</code></strong></td>  <td><code>BitFlags</code></td>  <td>Easily define and manipulate bitflags.</td></tr><tr>  <td><strong><code>smart-default</code></strong></td>  <td><code>SmartDefault</code></td>  <td>Extends <code>Default</code> with custom defaults for individual fields.</td></tr></tbody></table><h4>1. <strong><code>derive_builder</code> - Builder Pattern</strong></h4><p>Used to generate a builder for constructing complex structs.</p><pre><code class="language-rust">use derive_builder::Builder;
+
+#[derive(Builder, Debug)]
+struct Config {
+    host: String,
+    port: u16,
+    use_tls: bool,
+}
+
+fn main() {
+    let config = ConfigBuilder::default()
+        .host(&quot;localhost&quot;.to_string())
+        .port(8080)
+        .use_tls(true)
+        .build()
+        .unwrap();
+
+    println!(&quot;{:?}&quot;, config); // Config { host: &quot;localhost&quot;, port: 8080, use_tls: true }
+}</code></pre><h4>2. <strong><code>serde</code> - Serialization/Deserialization</strong></h4><p>Converts structs or enums to/from formats like JSON or YAML.</p><pre><code class="language-rust">use serde::{Serialize, Deserialize};
+
+#[derive(Serialize, Deserialize, Debug)]
+struct User {
+    id: u64,
+    name: String,
+}
+
+fn main() {
+    let user = User { id: 1, name: &quot;Alice&quot;.to_string() };
+    let json = serde_json::to_string(&amp;user).unwrap();
+    println!(&quot;{}&quot;, json); // {&quot;id&quot;:1,&quot;name&quot;:&quot;Alice&quot;}
+
+    let deserialized: User = serde_json::from_str(&amp;json).unwrap();
+    println!(&quot;{:?}&quot;, deserialized); // User { id: 1, name: &quot;Alice&quot; }
+}</code></pre><h4>3. <strong><code>thiserror</code> - Error Handling</strong></h4><p>Simplifies creating custom error types.</p><pre><code class="language-rust">use thiserror::Error;
+
+#[derive(Error, Debug)]
+enum MyError {
+    #[error(&quot;Invalid input: {0}&quot;)]
+    InvalidInput(String),
+    #[error(&quot;Database error&quot;)]
+    DatabaseError,
+}
+
+fn main() {
+    let err = MyError::InvalidInput(&quot;missing field&quot;.to_string());
+    println!(&quot;{}&quot;, err); // Invalid input: missing field
+}</code></pre><h4>4. <strong><code>strum</code> - Enum Enhancements</strong></h4><p>Adds utilities for enums, such as string conversions or iteration.</p><pre><code class="language-rust">use strum_macros::{EnumString, Display, EnumIter};
+
+#[derive(EnumString, Display, EnumIter, Debug)]
+enum Color {
+    #[strum(serialize = &quot;red&quot;)]
+    Red,
+    #[strum(serialize = &quot;green&quot;)]
+    Green,
+    #[strum(serialize = &quot;blue&quot;)]
+    Blue,
+}
+
+fn main() {
+    let color: Color = &quot;red&quot;.parse().unwrap();
+    println!(&quot;{}&quot;, color); // Red
+}</code></pre><h4>5. <strong><code>getset</code> - Getters and Setters</strong></h4><p>Auto-generates getters and setters for fields.</p><pre><code class="language-rust">use getset::{Getters, Setters};
+
+#[derive(Getters, Setters, Debug)]
+struct Person {
+    #[getset(get = &quot;pub&quot;, set = &quot;pub&quot;)]
+    name: String,
+    #[getset(get = &quot;pub&quot;)]
+    age: u8,
+}
+
+fn main() {
+    let mut person = Person { name: &quot;Alice&quot;.to_string(), age: 30 };
+    person.set_name(&quot;Bob&quot;.to_string());
+    println!(&quot;{}&quot;, person.name()); // Bob
+}</code></pre><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/rust/core/annotations.md</span></p>
+1734591766497	1686497988937	<p>Most common traits of stdlib?</p>	<h3><strong>1. Core Traits</strong></h3><table><thead><tr>  <th><strong>Trait</strong></th>  <th><strong>Purpose</strong></th>  <th><strong>Key Methods</strong></th></tr></thead><tbody><tr>  <td><code>Clone</code></td>  <td>For creating duplicate values.</td>  <td><code>clone()</code></td></tr><tr>  <td><code>Copy</code></td>  <td>For simple, bitwise copyable types (e.g., integers, floats).</td>  <td>Implicit (<code>=</code>)</td></tr><tr>  <td><code>Default</code></td>  <td>For creating a default value for a type.</td>  <td><code>default()</code></td></tr><tr>  <td><code>Debug</code></td>  <td>For formatting values for debugging.</td>  <td><code>fmt()</code> (used with <code>{:?}</code>)</td></tr><tr>  <td><code>PartialEq</code>/<code>Eq</code></td>  <td>For comparing values for equality.</td>  <td><code>==</code>, <code>!=</code></td></tr><tr>  <td><code>PartialOrd</code>/<code>Ord</code></td>  <td>For ordering and comparisons.</td>  <td><code>&lt;</code>, <code>&gt;</code>, <code>cmp()</code></td></tr></tbody></table><h3><strong>2. Iterator and Collection Traits</strong></h3><table><thead><tr>  <th><strong>Trait</strong></th>  <th><strong>Purpose</strong></th>  <th><strong>Key Methods</strong></th></tr></thead><tbody><tr>  <td><code>Iterator</code></td>  <td>For iterating over a sequence of items.</td>  <td><code>next()</code>, <code>map()</code>, <code>filter()</code></td></tr><tr>  <td><code>IntoIterator</code></td>  <td>Converts a type into an <code>Iterator</code>.</td>  <td><code>into_iter()</code></td></tr><tr>  <td><code>Extend</code></td>  <td>Extends a collection by adding items from an <code>Iterator</code>.</td>  <td><code>extend()</code></td></tr><tr>  <td><code>FromIterator</code></td>  <td>Creates a collection from an <code>Iterator</code>.</td>  <td><code>from_iter()</code></td></tr></tbody></table><h3><strong>3. Conversion and Formatting Traits</strong></h3><table><thead><tr>  <th><strong>Trait</strong></th>  <th><strong>Purpose</strong></th>  <th><strong>Key Methods</strong></th></tr></thead><tbody><tr>  <td><code>From</code></td>  <td>Converts one type into another.</td>  <td><code>from()</code></td></tr><tr>  <td><code>Into</code></td>  <td>Converts a type into another type.</td>  <td><code>into()</code></td></tr><tr>  <td><code>AsRef</code>/<code>AsMut</code></td>  <td>Provides references to types (<code>&amp;T</code> or <code>&amp;mut T</code>).</td>  <td><code>as_ref()</code>, <code>as_mut()</code></td></tr><tr>  <td><code>ToString</code></td>  <td>Converts a type into a <code>String</code>.</td>  <td><code>to_string()</code></td></tr><tr>  <td><code>Display</code></td>  <td>Formats a value for user-facing output.</td>  <td><code>fmt()</code> (used with <code>{}</code>)</td></tr></tbody></table><h4><strong><code>From</code></strong></h4><ul><li>defines a <strong>safe and infallible conversion</strong> from one type to another.</li><li>It’s one of the core <em>conversion traits</em> in the standard library (along with <code>Into</code> and <code>TryFrom</code>).</li></ul><pre><code class="language-rust">pub trait From&lt;T&gt;: Sized {
+    fn from(value: T) -&gt; Self;
+}
+
+let s = String::from(&quot;hello&quot;); // &amp;str → String
+let n = i32::from(42u8);       // u8 → i32</code></pre><p><code>From</code> and <code>Into</code> relationship: They’re directly linked:</p><pre><code class="language-rust">impl&lt;T, U&gt; Into&lt;U&gt; for T
+where
+    U: From&lt;T&gt;,
+{
+    fn into(self) -&gt; U {
+        U::from(self)
+    }
+}</code></pre><p>So <strong>if you implement <code>From&lt;T&gt;</code> for <code>U</code></strong>, you automatically get <code>Into&lt;U&gt;</code> for free.</p><p>Use <code>From</code> when:</p><p>Examples:</p><ul><li><code>String::from(&amp;str)</code></li><li><code>Vec::from(&amp;[T])</code></li><li><code>IpAddr::from(Ipv4Addr)</code></li><li>Custom types converting from primitives or tuples</li></ul><h4><code>AsRef</code></h4><ul><li>an important trait, but you rarely see it written explicitly in everyday Rust code.</li><li><code>AsRef&lt;T&gt;</code> is a <strong>standard conversion trait</strong> that allows to <strong>borrow a reference</strong> from another type.</li></ul><pre><code class="language-rust">pub trait AsRef&lt;T: ?Sized&gt; {
+    fn as_ref(&amp;self) -&gt; &amp;T;
+}
+
+let s = String::from(&quot;hello&quot;);
+let r: &amp;str = s.as_ref(); // &amp;String -&gt; &amp;str</code></pre><p>You rarely see <strong><code>AsRef</code></strong> in <em>callsites</em> because:</p><p>It’s used <strong>in function bounds</strong>, not in code bodies.</p><p>Library authors use it in <strong>generic APIs</strong> to accept multiple input types.
+Callers just pass whatever type they already have.</p><pre><code class="language-rust">fn read_file&lt;P: AsRef&lt;std::path::Path&gt;&gt;(path: P) {
+    let path_ref: &amp;std::path::Path = path.as_ref();
+    // ...
+}</code></pre><p><strong>Caller side:</strong></p><pre><code class="language-rust">read_file(&quot;config.yaml&quot;);        // &amp;str
+read_file(String::from(&quot;a.txt&quot;)); // String
+read_file(Path::new(&quot;b.txt&quot;));    // &amp;Path</code></pre><p>You don’t write <code>as_ref()</code> manually — the compiler infers it via generics.</p><p><strong>Where you <em>do</em> see it</strong></p><ul><li>In <strong>library code</strong> (e.g., <code>std</code>, <code>tokio</code>, <code>reqwest</code>, <code>serde</code>, etc.).</li><li>In <strong>generic utilities</strong> that should accept either <code>&amp;str</code>, <code>String</code>, <code>Path</code>, <code>&amp;Path</code>, etc.</li></ul><pre><code class="language-rust">impl File {
+    pub fn open&lt;P: AsRef&lt;Path&gt;&gt;(path: P) -&gt; io::Result&lt;File&gt; {
+        // internally: path.as_ref()
+    }
+}</code></pre><p>Callers can use any type that can reference a <code>Path</code> — that’s the power of <code>AsRef</code>.</p><p>Use <code>AsRef</code> when you write <strong>APIs that take “anything that can be referenced as …”</strong>, e.g.:</p><pre><code class="language-rust">fn print_uppercase&lt;S: AsRef&lt;str&gt;&gt;(input: S) {
+    println!(&quot;{}&quot;, input.as_ref().to_uppercase());
+}</code></pre><p>You can now call:</p><pre><code class="language-rust">print_uppercase(&quot;hello&quot;);
+print_uppercase(String::from(&quot;world&quot;));</code></pre><table><thead><tr>  <th>Why you rarely see it</th>  <th>Explanation</th></tr></thead><tbody><tr>  <td>It’s used in <strong>trait bounds</strong>, not directly in calls</td>  <td>Most developers are callers, not implementors</td></tr><tr>  <td>It enables <strong>flexible APIs</strong> to accept multiple reference types</td>  <td>Common in library design</td></tr><tr>  <td>It’s <strong>often implicit</strong> — no need to call <code>.as_ref()</code> yourself</td>  <td>Rust’s type inference handles it</td></tr></tbody></table><h4><code>AsMut</code> is the <strong>mutable</strong> companion to <code>AsRef</code>.</h4><ul><li>trait for getting <strong><code>&amp;mut T</code></strong> from another type, cheaply and without allocation.</li></ul><pre><code class="language-rust">pub trait AsMut&lt;T: ?Sized&gt; {
+    fn as_mut(&amp;mut self) -&gt; &amp;mut T;
+}</code></pre><ul><li><p>Takes <code>&amp;mut self</code> and returns <code>&amp;mut T</code>.</p></li><li><p>Used for zero-cost, ref-to-ref <strong>mutable</strong> conversions.</p></li><li><p>Common impls:</p><ul><li><code>impl&lt;T&gt; AsMut&lt;T&gt; for T</code> → <code>x.as_mut()</code> gives <code>&amp;mut T</code></li><li><code>Box&lt;T&gt; : AsMut&lt;T&gt;</code></li><li><code>Vec&lt;T&gt; : AsMut&lt;[T]&gt;</code> (mutable slice)</li><li><code>String : AsMut&lt;str&gt;</code></li><li><code>PathBuf : AsMut&lt;Path&gt;</code>, <code>OsString : AsMut&lt;OsStr&gt;</code>, etc.</li></ul></li></ul><pre><code class="language-rust">// Example: generic API that can mutate through many wrappers
+fn zero_out&lt;U&gt;(mut x: U)
+where
+    U: AsMut&lt;u32&gt;,
+{
+    *x.as_mut() = 0;
+}
+
+fn main() {
+    let mut a: u32 = 5;
+    zero_out(&amp;mut a);            // &amp;mut T implements AsMut&lt;T&gt;
+    let mut b = Box::new(7u32);
+    zero_out(&amp;mut b);            // Box&lt;u32&gt; → &amp;mut u32
+}</code></pre><p>Pitfall:</p><ul><li>You can’t get <code>&amp;mut T</code> from <code>&amp;T</code> via <code>AsMut</code> (it requires <code>&amp;mut self</code>), which preserves Rust’s
+aliasing rules.</li></ul><h3><strong>4. Error Handling Traits</strong></h3><table><thead><tr>  <th><strong>Trait</strong></th>  <th><strong>Purpose</strong></th>  <th><strong>Key Methods</strong></th></tr></thead><tbody><tr>  <td><code>Error</code></td>  <td>Represents error types with optional descriptions or sources.</td>  <td><code>description()</code>, <code>source()</code></td></tr><tr>  <td><code>Result</code></td>  <td>Common enum for error handling (<code>Ok</code> or <code>Err</code>).</td>  <td><code>unwrap()</code>, <code>expect()</code>, <code>map()</code></td></tr><tr>  <td><code>Option</code></td>  <td>Represents an optional value (<code>Some</code> or <code>None</code>).</td>  <td><code>unwrap()</code>, <code>map()</code>, <code>is_some()</code></td></tr></tbody></table><h3><strong>5. Functional Programming Traits</strong></h3><table><thead><tr>  <th><strong>Trait</strong></th>  <th><strong>Purpose</strong></th>  <th><strong>Key Methods</strong></th></tr></thead><tbody><tr>  <td><code>Fn</code>, <code>FnMut</code>, <code>FnOnce</code></td>  <td>For closures and callable objects.</td>  <td><code>call()</code>, <code>call_mut()</code>, <code>call_once()</code></td></tr></tbody></table><h3><strong>6. Smart Pointer and Ownership Traits</strong></h3><table><thead><tr>  <th><strong>Trait</strong></th>  <th><strong>Purpose</strong></th>  <th><strong>Key Methods</strong></th></tr></thead><tbody><tr>  <td><code>Deref</code></td>  <td>Overloads the dereference operator (<code>*</code>).</td>  <td><code>deref()</code></td></tr><tr>  <td><code>Drop</code></td>  <td>Custom cleanup logic when a value goes out of scope.</td>  <td><code>drop()</code> (called automatically)</td></tr><tr>  <td><code>Borrow</code>/<code>BorrowMut</code></td>  <td>Provides immutable/mutable borrowing of values.</td>  <td><code>borrow()</code>, <code>borrow_mut()</code></td></tr></tbody></table><h3><strong>7. Marker Traits</strong></h3><table><thead><tr>  <th><strong>Trait</strong></th>  <th><strong>Purpose</strong></th>  <th><strong>Key Notes</strong></th></tr></thead><tbody><tr>  <td><code>Sized</code></td>  <td>Indicates types with a known size at compile-time (automatically applied).</td>  <td>All types are <code>Sized</code> by default.</td></tr><tr>  <td><code>Send</code></td>  <td>Allows types to be transferred between threads.</td>  <td>Needed for thread safety.</td></tr><tr>  <td><code>Sync</code></td>  <td>Allows shared references to be shared between threads.</td>  <td>Needed for concurrency.</td></tr></tbody></table><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/rust/core/traits.md</span></p>
+1734944783891	1686497988937	<p>Explain Smart Pointers:</p>	<ul><li>special types that manage memory with additional capabilities, such as automatic cleanup,</li><li>reference counting, or ensuring unique ownership.</li><li>differ from regular pointers in that they encapsulate ownership, borrowing, or lifetimes and</li><li>often include methods for accessing or manipulating the underlying data.</li><li>Implement trait <code>Deref, Drop</code></li></ul><h3>Why <code>Vec&lt;T&gt;</code> is a smart pointer</h3><p>A <code>Vec&lt;T&gt;</code> is implemented as a struct that contains:</p><ul><li>A <strong>pointer</strong> to a heap-allocated buffer (<code>*mut T</code>),</li><li>A <strong>length</strong> (<code>len</code>),</li><li>A <strong>capacity</strong> (<code>cap</code>).</li></ul><p>So the <code>Vec</code> value itself lives on the stack, but it <strong>points to elements stored on the heap</strong>.</p><p>When the <code>Vec</code> is dropped:</p><ul><li>Rust automatically deallocates the heap buffer,</li><li>and drops all contained elements.</li></ul><p>That automatic heap memory management makes it a <strong>smart pointer</strong>.</p><h3>Compare with <code>String</code></h3><ul><li><code>String</code> is essentially a <code>Vec&lt;u8&gt;</code> with the invariant that its bytes are valid UTF-8.</li><li>Both <code>String</code> and <code>Vec&lt;T&gt;</code> are growable, heap-allocated collections.</li><li>Both are “owning smart pointers” (own their buffer, free it on drop).</li></ul><h3>Example:</h3><pre><code class="language-rust">fn main() {
+    let mut v = Vec::new();
+    v.push(10);
+    v.push(20);
+
+    println!(&quot;Length: {}&quot;, v.len());   // metadata (len)
+    println!(&quot;First: {}&quot;, v[0]);       // dereference into heap memory
+}</code></pre><ul><li><code>v</code> itself is a small struct (3 machine words: pointer, len, cap).</li><li>The actual integers <code>10</code> and <code>20</code> live in heap memory.</li><li>Accessing them (<code>v[0]</code>) means following the pointer + indexing.</li></ul><p><code>Vec&lt;T&gt;</code> is a smart pointer**, but also a collection type.
+It owns heap memory, manages it automatically, and provides higher-level APIs on top.</p><h3>🔍 <strong>Rust’s <code>Deref</code> Trait in Smart Pointers</strong></h3><ul><li><code>Deref</code> allows <strong>smart pointers</strong> (like <code>Box&lt;T&gt;</code>, <code>Rc&lt;T&gt;</code>, <code>Arc&lt;T&gt;</code>) to behave like references to <code>T</code>.</li><li>It defines how a type can be <strong>dereferenced</strong> using the <code>*</code> operator.</li></ul><ul><li>enables smart pointers to behave like regular references without additional conversion</li><li>supports deref coercion for cleaner syntax and better interoperability.</li><li>It allows customizing how types expose their internal values.</li></ul><pre><code class="language-rust">trait Deref {
+    type Target: ?Sized;  // Target can be Sized (like `String`) or unsized (like `[u8]`)
+    fn deref(&amp;self) -&gt; &amp;Self::Target;
+}
+let x: Box&lt;T&gt; = Box::new(...);
+let y: &amp;T = &amp;*x;
+let y: &amp;T = &amp;x;  // auto-deref happens here</code></pre><ul><li>Target is the type you want to access when * or implicit deref coercion happens.</li><li>It only allows returning a reference (&amp;Target), not ownership.</li><li>Works with deref coercion: the compiler can automatically convert &amp;T to &amp;U if T: Deref&lt;Target=U&gt;.</li><li>By default, all generic type parameters are assumed to be Sized</li><li>Without ?Sized Box&lt;[u8]&gt; or Box<dyn Trait> would be impossible (DST dyn simzed types).</li></ul><p>Rust <strong>automatically calls <code>deref()</code></strong> behind the scenes, yielding <code>&amp;T</code>.</p><h4>🧠 <strong>Why Is This Important?</strong></h4><ul><li>It lets smart pointers be <strong>used like regular references</strong> (<code>&amp;T</code>).</li><li>Enables <strong>method calls</strong> and <strong>operator overloading</strong> (auto-deref in method resolution):</li></ul><pre><code class="language-rust">let s = Rc::new(String::from(&quot;hello&quot;));
+println!(&quot;{}&quot;, s.len());  // s is auto-dereferenced to &amp;String</code></pre><h4>1. <strong>Transparent Access to Underlying Data</strong></h4><p><code>Deref</code> defines how smart pointer behaves when <code>*</code> operator is used.</p><pre><code class="language-rust">let x = 5;
+let y = Box::new(x);
+
+assert_eq!(5, *y); // works because Box&lt;T&gt; implements Deref&lt;Target=T&gt;
+
+*(y.deref())  // y.deref() -&gt; &amp;i32, then *&amp;i32 -&gt; i32</code></pre><ul><li><code>*y</code> calls <code>Deref::deref(&amp;y)</code>, which returns <code>&amp;i32</code>.</li><li>Then the compiler dereferences that <code>&amp;i32</code> to <code>i32</code> (because <code>*</code> was applied).</li></ul><p>So <code>*y</code> is really:</p><pre><code class="language-rust">*(y.deref())  // y.deref() -&gt; &amp;i32, then *&amp;i32 -&gt; i32</code></pre><p>Confusion comes from how Rust automatically applies <code>Deref</code> <em>coercions</em> in certain contexts
+(like method calls). But the raw <code>*</code> operator itself is precise:</p><ul><li><code>*reference_to_box</code> → gets the <code>Box</code> back.</li><li><code>*box</code> → calls <code>Deref</code>, gets the inner value.</li></ul><pre><code class="language-rust">fn main() {
+    let x = 5;
+    let y = Box::new(x);
+
+    // *y calls Deref -&gt; &amp;i32 -&gt; i32
+    assert_eq!(5, *y);
+
+    // &amp;y is &amp;Box&lt;i32&gt;
+    let r: &amp;Box&lt;i32&gt; = &amp;y;
+
+    // *r removes the &amp; -&gt; gives back the Box&lt;i32&gt;
+    let b: Box&lt;i32&gt; = *r; // moves it out!
+    assert_eq!(5, *b);
+}</code></pre><h4>2. <strong>Polymorphism with Regular References</strong></h4><p>functions take references (<code>&amp;T</code>) as arguments. For smart pointers to work, they must be convertible to regular references. The <code>Deref</code> trait enables this by defining how the smart pointer can be dereferenced to a <code>&amp;T</code>.</p><pre><code class="language-rust">fn greet(name: &amp;str) {
+    println!(&quot;Hello, {}!&quot;, name);
+}
+
+let my_name = Box::new(String::from(&quot;Alice&quot;));
+greet(&amp;my_name); // Deref coercion converts `&amp;Box&lt;String&gt;` to `&amp;String` and then to `&amp;str`.</code></pre><p>This is known as <strong>Deref coercion</strong>, where the compiler automatically calls the <code>Deref</code> implementation to transform a smart pointer into a compatible reference.</p><h4>3. <strong>Customizing Dereference Behavior</strong></h4><p>By implementing the <code>Deref</code> trait, you can define custom dereference behavior for your own types to seamlessly expose their inner values.</p><pre><code class="language-rust">use std::ops::Deref;
+
+struct MyBox&lt;T&gt;(T);
+
+impl&lt;T&gt; MyBox&lt;T&gt; {
+    fn new(value: T) -&gt; MyBox&lt;T&gt; {
+        MyBox(value)
+    }
+}
+
+impl&lt;T&gt; Deref for MyBox&lt;T&gt; {
+    type Target = T;
+
+    fn deref(&amp;self) -&gt; &amp;Self::Target {
+        &amp;self.0 // Returns a reference to the inner value
+    }
+}
+
+let my_box = MyBox::new(42);
+assert_eq!(42, *my_box); // Deref trait enables dereferencing to the inner value</code></pre><p>Treating a Type Like a Reference by Implementing the <code>Deref</code> Trait:<code>*sp</code> is replaced with <code>*(sp.deref())</code>:</p><ul><li><code>deref()</code> method returns a reference, which can be dereferenced with <code>*</code></li><li>If the deref method returned the value directly instead of a reference to the value, the value would be moved out of self.</li><li>We don't want to take ownership of the inner value inside <code>MyBox&lt;T&gt;</code></li></ul><h3><strong>Why Use Smart Pointers?</strong></h3><ol><li><strong>Memory Safety</strong>: Prevent memory leaks, dangling pointers, and double frees.</li><li><strong>Ownership Management</strong>: Facilitate single or shared ownership of data.</li><li><strong>Abstractions</strong>: Provide ergonomic APIs for resource management (e.g., dynamic allocation, reference counting).</li></ol><h3><strong>Key Smart Pointer Types in Rust</strong></h3><table><thead><tr>  <th><strong>Smart Pointer</strong></th>  <th><strong>Purpose</strong></th>  <th><strong>Key Features</strong></th>  <th><strong>Example Use Cases</strong></th></tr></thead><tbody><tr>  <td><code>Box&lt;T&gt;</code></td>  <td>Allocates data on the heap.</td>  <td>Single ownership; Deref to value.</td>  <td>Large structs, recursive types.</td></tr><tr>  <td><code>Rc&lt;T&gt;</code></td>  <td>Reference-counted pointer for shared ownership.</td>  <td>Immutable shared ownership.</td>  <td>Shared immutable data (e.g., graphs, trees).</td></tr><tr>  <td><code>Arc&lt;T&gt;</code></td>  <td>Like <code>Rc&lt;T&gt;</code>, but thread-safe (atomic reference counting).</td>  <td>Thread-safe shared RO ownership.</td>  <td>Shared data across threads in concurrent code.</td></tr><tr>  <td><code>RefCell&lt;T&gt;</code></td>  <td>Allows mutable borrows checked at runtime.</td>  <td>Interior mutability; not thread-safe.</td>  <td>Mutating data in shared ownership contexts.</td></tr><tr>  <td><code>Cell&lt;T&gt;</code></td>  <td>Similar to <code>RefCell</code>, but for Copy types with no borrows.</td>  <td>Interior mutability for <code>Copy</code> types.</td>  <td>Mutating small values like integers.</td></tr><tr>  <td><code>Mutex&lt;T&gt;</code></td>  <td>Provides mutual exclusion for data in multithreaded code.</td>  <td>Thread-safe interior mutability.</td>  <td>Protecting data shared across threads.</td></tr><tr>  <td><code>RwLock&lt;T&gt;</code></td>  <td>A read-write lock for multithreaded code.</td>  <td>Multiple readers or a single writer.</td>  <td>High-performance shared mutable state.</td></tr><tr>  <td><code>Cow&lt;T&gt;</code></td>  <td>A clone-on-write pointer.</td>  <td>Avoids cloning unless necessary.</td>  <td>Efficient handling of borrowed or owned data.</td></tr><tr>  <td><code>Weak&lt;T&gt;</code></td>  <td>non-owning reference for use with Rc or Arc.</td>  <td>does not add to reference count, no owning.</td>  <td>Prevents circular refs in ref-counted structures trees/graphs.</td></tr></tbody></table><h4><strong>1. <code>Box&lt;T&gt;</code> - Heap Allocation</strong></h4><p><code>Box</code> is used to allocate data on the heap, providing ownership and a stable address.</p><pre><code class="language-rust">fn main() {
+    let b = Box::new(42); // Allocate on the heap
+    println!(&quot;Boxed value: {}&quot;, b);
+
+    // Useful for recursive types:
+    enum List {
+        Cons(i32, Box&lt;List&gt;),
+        Nil,
+    }
+
+    let _list = List::Cons(1, Box::new(List::Cons(2, Box::new(List::Nil))));
+}</code></pre><h4><strong>2. <code>Rc&lt;T&gt;</code> - Reference Counting</strong></h4><p><code>Rc</code> enables multiple owners for the same data, with immutable access.</p><pre><code class="language-rust">use std::rc::Rc;
+
+fn main() {
+    let data = Rc::new(&quot;Hello, Rc!&quot;.to_string());
+
+    let a = Rc::clone(&amp;data); // Clone the reference (not the data).
+    let b = Rc::clone(&amp;data);
+
+    println!(&quot;Reference count: {}&quot;, Rc::strong_count(&amp;data)); // 3
+    println!(&quot;{}, {}&quot;, a, b);
+}</code></pre><h4><strong>3. <code>Arc&lt;T&gt;</code> - Thread-Safe Reference Counting</strong></h4><p><code>Arc</code> is like <code>Rc</code>, but for concurrent scenarios.</p><pre><code class="language-rust">use std::sync::Arc;
+use std::thread;
+
+fn main() {
+    let data = Arc::new(&quot;Hello, Arc!&quot;.to_string());
+
+    let handles: Vec&lt;_&gt; = (0..3)
+        .map(|_| {
+            let data = Arc::clone(&amp;data);
+            thread::spawn(move || println!(&quot;{}&quot;, data))
+        })
+        .collect();
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+}</code></pre><h4><strong>4. <code>RefCell&lt;T&gt;</code> - Interior Mutability</strong></h4><p><code>RefCell</code> allows mutable borrowing even if the <code>RefCell</code> itself is immutable.</p><pre><code class="language-rust">use std::cell::RefCell;
+
+fn main() {
+    let data = RefCell::new(42);
+
+    *data.borrow_mut() += 1; // Runtime-checked mutable borrow
+    println!(&quot;Updated value: {}&quot;, *data.borrow());
+}</code></pre><h4><strong>5. <code>Mutex&lt;T&gt;</code> - Mutual Exclusion</strong></h4><p><code>Mutex</code> ensures exclusive access to data in multithreaded scenarios.</p><pre><code class="language-rust">use std::sync::Mutex;
+
+fn main() {
+    let data = Mutex::new(42);
+
+    {
+        let mut locked = data.lock().unwrap();
+        *locked += 1;
+    }
+
+    println!(&quot;Updated value: {}&quot;, *data.lock().unwrap());
+}</code></pre><h4><strong>6. <code>RwLock&lt;T&gt;</code> - Read-Write Lock</strong></h4><p><code>RwLock</code> allows multiple readers or one writer.</p><pre><code class="language-rust">use std::sync::RwLock;
+
+fn main() {
+    let data = RwLock::new(42);
+
+    {
+        let read1 = data.read().unwrap();
+        let read2 = data.read().unwrap();
+        println!(&quot;Readers: {}, {}&quot;, read1, read2);
+    }
+
+    {
+        let mut write = data.write().unwrap();
+        *write += 1;
+    }
+
+    println!(&quot;Updated value: {}&quot;, *data.read().unwrap());
+}</code></pre><h4><strong>7. <code>Cow&lt;T&gt;</code> - Clone-on-Write</strong></h4><p>Problem: Avoid Unnecessary Copies</p><p><code>Cow</code> means <strong>“clone-on-write”</strong> — use a borrowed reference by default, but automatically “upgrade”
+to owned data when you must modify it.</p><pre><code class="language-rust">// Without `Cow`
+fn to_upper_always_owned(s: &amp;str) -&gt; String {
+    s.to_uppercase() // allocates every time
+}</code></pre><p>This is wasteful if the string is already uppercase.</p><p>We can borrow when possible, clone only if necessary.</p><pre><code class="language-rust">// With `Cow`
+use std::borrow::Cow;
+
+fn ensure_uppercase&lt;'a&gt;(input: &amp;'a str) -&gt; Cow&lt;'a, str&gt; {
+    if input.chars().all(|c| !c.is_lowercase()) {
+        // already uppercase — no allocation
+        Cow::Borrowed(input)
+    } else {
+        // needs change — allocate a new String
+        Cow::Owned(input.to_uppercase())
+    }
+}
+
+fn main() {
+    let s1 = &quot;HELLO&quot;;
+    let s2 = &quot;Hello&quot;;
+
+    let r1 = ensure_uppercase(s1);
+    let r2 = ensure_uppercase(s2);
+
+    println!(&quot;r1 = {}&quot;, r1); // Borrowed(&amp;str)
+    println!(&quot;r2 = {}&quot;, r2); // Owned(String)
+}</code></pre><table><thead><tr>  <th>Input</th>  <th>Result type</th>  <th>Allocates?</th>  <th>Result value</th></tr></thead><tbody><tr>  <td><code>&quot;HELLO&quot;</code></td>  <td><code>Cow::Borrowed(&amp;str)</code></td>  <td>No</td>  <td><code>&quot;HELLO&quot;</code></td></tr><tr>  <td><code>&quot;Hello&quot;</code></td>  <td><code>Cow::Owned(String)</code></td>  <td>Yes</td>  <td><code>&quot;HELLO&quot;</code></td></tr></tbody></table><p><code>Cow</code> lets you return <strong>borrowed data</strong> when no change is needed, avoiding a clone — but <strong>owned
+data</strong> when modification is necessary.</p><p>Where this is useful:</p><ul><li>APIs that may receive borrowed data but need to return something possibly modified.</li></ul><h4>**8. <code>Weak&lt;T&gt;</code></h4><p><code>Weak&lt;T&gt;</code> is a <strong>non-owning handle</strong> to data in an <code>Rc&lt;T&gt;</code> (or <code>Arc&lt;T&gt;</code>).
+It’s used to <strong>break reference cycles</strong> and <strong>observe shared data</strong> without keeping it alive.</p><p>Background: <code>Rc&lt;T&gt;</code> creates shared ownership</p><p><code>Rc&lt;T&gt;</code> = “reference-counted” pointer.</p><ul><li>Multiple <code>Rc&lt;T&gt;</code>s can share ownership of the same data.</li><li>The data is dropped when the <strong>strong reference count</strong> reaches <strong>zero</strong>.</li></ul><pre><code class="language-rust">use std::rc::Rc;
+
+let a = Rc::new(5);
+let b = Rc::clone(&amp;a);
+
+println!(&quot;{}&quot;, Rc::strong_count(&amp;a)); // 2</code></pre><p><strong>The problem</strong> — reference cycles:</p><ul><li>If two <code>Rc</code>s refer to each other, they form a <strong>cycle</strong>:</li></ul><pre><code class="language-rust">a → b → a</code></pre><p>Neither’s count ever reaches zero → <strong>memory leak</strong>.</p><p><strong>The solution</strong> — <code>Weak&lt;T&gt;</code></p><p><code>Weak&lt;T&gt;</code> is a <strong>non-owning</strong> reference to data managed by an <code>Rc&lt;T&gt;</code>.</p><ul><li>It <strong>does not increase</strong> the strong reference count.</li><li>It <strong>can be upgraded</strong> temporarily to <code>Rc&lt;T&gt;</code> if the data is still alive.</li><li>It’s perfect for <strong>parent–child</strong> relationships or <strong>cache-like</strong> structures.</li></ul><pre><code class="language-rust">// Example: Preventing a cycle
+use std::rc::{Rc, Weak};
+use std::cell::RefCell;
+
+struct Node {
+    value: i32,
+    parent: RefCell&lt;Weak&lt;Node&gt;&gt;,      // weak reference to parent
+    children: RefCell&lt;Vec&lt;Rc&lt;Node&gt;&gt;&gt;, // strong references to children
+}
+
+fn main() {
+    let parent = Rc::new(Node {
+        value: 1,
+        parent: RefCell::new(Weak::new()),
+        children: RefCell::new(Vec::new()),
+    });
+
+    let child = Rc::new(Node {
+        value: 2,
+        parent: RefCell::new(Rc::downgrade(&amp;parent)), // weak ref to parent
+        children: RefCell::new(Vec::new()),
+    });
+
+    parent.children.borrow_mut().push(Rc::clone(&amp;child));
+
+    println!(
+        &quot;strong = {}, weak = {}&quot;,
+        Rc::strong_count(&amp;parent),
+        Rc::weak_count(&amp;parent)
+    );
+
+    // Try to upgrade the weak reference
+    if let Some(parent_rc) = child.parent.borrow().upgrade() {
+        println!(&quot;Parent value = {}&quot;, parent_rc.value);
+    } // upgrade() returns None if parent was dropped
+}</code></pre><table><thead><tr>  <th>Count type</th>  <th>Incremented by</th>  <th>Keeps data alive?</th>  <th>Example</th></tr></thead><tbody><tr>  <td><strong>Strong</strong> (<code>Rc::strong_count</code>)</td>  <td><code>Rc::clone()</code></td>  <td><strong>Yes</strong></td>  <td>child holds parent strongly</td></tr><tr>  <td><strong>Weak</strong> (<code>Rc::weak_count</code>)</td>  <td><code>Rc::downgrade()</code></td>  <td><strong>No</strong></td>  <td>parent holds child weakly</td></tr></tbody></table><p>Use <code>Weak</code> when you want to:</p><ul><li><strong>Avoid ownership cycles</strong> (e.g., parent ↔ child graphs).</li><li><strong>Observe</strong> or <strong>cache</strong> data without keeping it alive.</li><li>Build structures like trees, DAGs, or caches.</li></ul><h3><strong>Key Differences</strong></h3><table><thead><tr>  <th><strong>Smart Pointer</strong></th>  <th><strong>Heap Allocation</strong></th>  <th><strong>Shared Ownership</strong></th>  <th><strong>Thread Safety</strong></th>  <th><strong>Interior Mutability</strong></th></tr></thead><tbody><tr>  <td><code>Box&lt;T&gt;</code></td>  <td>?</td>  <td>?</td>  <td>?</td>  <td>?</td></tr><tr>  <td><code>Rc&lt;T&gt;</code></td>  <td>?</td>  <td>?</td>  <td>?</td>  <td>?</td></tr><tr>  <td><code>Arc&lt;T&gt;</code></td>  <td>?</td>  <td>?</td>  <td>?</td>  <td>?</td></tr><tr>  <td><code>RefCell&lt;T&gt;</code></td>  <td>?</td>  <td>?</td>  <td>?</td>  <td>? (runtime checked)</td></tr><tr>  <td><code>Mutex&lt;T&gt;</code></td>  <td>?</td>  <td>?</td>  <td>?</td>  <td>? (runtime checked)</td></tr></tbody></table><h3><strong>When to Use What</strong></h3><ul><li><strong><code>Box&lt;T&gt;</code></strong>: When you need heap allocation or recursive types.</li><li><strong><code>Rc&lt;T&gt;</code></strong>: Shared ownership in single-threaded contexts.</li><li><strong><code>Arc&lt;T&gt;</code></strong>: Shared ownership in multithreaded contexts.</li><li><strong><code>RefCell&lt;T&gt;</code></strong>: Mutable access in single-threaded scenarios.</li><li><strong><code>Mutex&lt;T&gt;</code>/<code>RwLock&lt;T&gt;</code></strong>: For thread-safe interior mutability.</li></ul><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/rust-reference.md</span></p>
+1735811879776	1686497988937	<p>why do I need the &quot;&amp;&quot; operator on m. It is a smart pointer which behaves already as a reference, isn't it?</p><pre><code class="language-rust">fn hello(string: &amp;str) { }
+
+let m = Box::new(String::from(&quot;Rust&quot;));
+hello(&amp;m);</code></pre>	<h3>Key Distinction: Smart Pointers vs References</h3><ul><li>A <strong>smart pointer</strong> like <code>Box&lt;T&gt;</code> provides ownership over the value it points to. It behaves like a pointer but is not the same as a Rust reference.</li><li>A <strong>reference</strong> (<code>&amp;T</code>) is non-owning pointer used to borrow data temporarily.</li></ul><p>Even though <code>Box&lt;T&gt;</code> implements the <code>Deref</code> trait to dereference into <code>T</code>, it is still an owned type, not a reference.
+Deref coercion works on <strong>references to the smart pointer</strong>, not the smart pointer itself.</p><h3>Why <code>&amp;m</code> is Necessary</h3><p>The function <code>hello</code> expects a <code>&amp;str</code>. However:</p><ol><li><code>m</code> is of type <code>Box&lt;String&gt;</code>, which means it <strong>owns</strong> the <code>String</code>.</li><li>To call <code>hello</code>, Rust needs a <code>&amp;str</code>. The compiler must:<ul><li>Borrow <code>m</code> as <code>&amp;Box&lt;String&gt;</code> (using the <code>&amp;</code> operator).</li><li>Apply deref coercion on <code>&amp;Box&lt;String&gt;</code> to get <code>&amp;String</code>.</li><li>Apply slicing on the <code>String</code> to get <code>&amp;str</code>.</li></ul></li></ol><p>Without the <code>&amp;</code>, there's no reference for deref coercion to work with. Smart pointers like <code>Box</code> don't automatically behave as references when passed to functions.</p><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/rust-reference.md</span></p>
+1735811880108	1686497988937	<p>Exlain the Law of Demeter</p>	<ul><li>The <strong>Law of Demeter</strong> (LoD), also known as the <strong>principle of least knowledge</strong></li><li>minimize unnecessary dependencies and encourage encapsulation, but apply the Law of Demeter judiciously where it improves design.</li><li>&quot;Talk only to your friends, not to strangers.&quot;</li><li>object should avoid calling methods on objects that are returned by other methods (chaining calls) or navigating deep object structures.</li></ul><p>states that a given object should only interact with its:</p><ol><li><strong>Immediate collaborators</strong> (its own direct dependencies).</li><li><strong>Objects it creates</strong>.</li><li><strong>Objects passed to it as arguments</strong>.</li></ol><h4><strong>Violation</strong></h4><pre><code class="language-java">public class CustomerService {
+    public String getCustomerAddress(Order order) {
+        return order.getCustomer().getAddress().toString(); // Chaining calls: Order -&gt; Customer -&gt; Address
+    }
+}</code></pre><ul><li>The method interacts with the <code>Customer</code> and <code>Address</code> objects, which are not its immediate collaborators. This creates tight coupling.</li></ul><h4><strong>Adhering to the Law of Demeter</strong></h4><pre><code class="language-java">public class Order {
+    public String getCustomerAddress() {
+        return customer.getAddress().toString(); // Delegation
+    }
+}
+
+public class CustomerService {
+    public String getCustomerAddress(Order order) {
+        return order.getCustomerAddress(); // Only interacts with Order
+    }
+}</code></pre><ul><li>Here, <code>Order</code> encapsulates the details of the <code>Customer</code> and <code>Address</code>, adhering to the Law of Demeter.</li></ul><ol><li><strong>Reduced Coupling</strong>: Minimizes dependencies between classes, making the system easier to understand and maintain.</li><li><strong>Increased Encapsulation</strong>: Protects the internal structure of objects.</li><li><strong>Improved Maintainability</strong>: Changes to one class have minimal impact on others.</li><li><strong>Enhanced Testability</strong>: Reduces the need to mock or simulate deep object graphs.</li></ol><h3><strong>When to Relax the Rule</strong></h3><ul><li>Accessing data structures like collections may require chained calls.</li><li>Fluent interfaces (e.g., builders) are intentionally designed with chaining for readability and usability.</li></ul><hr /><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/solid.md</span></p>
+1736449127090	1686497988937	<p>Explain <code>@Jacksonized</code>:</p>	<ul><li><code>@Jacksonized</code> used to integrate Lombok's generated classes with the Jackson library</li><li>ensures that a class annotated with <code>@Builder</code> works seamlessly with Jackson</li><li>Jackson requires a no-arguments constructor or setters for deserialization. When you use <code>@Builder</code>, these are not generated.</li><li>Enables to deserialize JSON into the <code>ChargingPoi</code> class using Jackson, even though the class is immutable and uses a builder pattern.</li></ul><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/help/java/lombok.md</span></p>
+1736584024689	1686497988937	<p>In OpenAPI, why is using a base schema with discriminator preferred over <code>anyOf</code> for handling polymorphic types?</p>	<h3><strong>❌ <code>anyOf</code> Approach (Less Preferred)</strong></h3><pre><code class="language-yaml">items:
+  anyOf:
+    - $ref: &quot;#/components/schemas/TypeA&quot;
+    - $ref: &quot;#/components/schemas/TypeB&quot;
+
+components:
+  schemas:
+    TypeA:
+      type: object
+      properties:
+        fieldA:
+          type: string
+
+    TypeB:
+      type: object
+      properties:
+        fieldB:
+          type: integer</code></pre><p>🔴 <strong>Downside</strong>: Harder to determine object type, requires additional validation logic.</p><h3><strong>✅ Base Schema with Discriminator and Mapping (Preferred)</strong></h3><pre><code class="language-yaml">items:
+  $ref: &quot;#/components/schemas/BaseItem&quot;
+
+components:
+  schemas:
+    BaseItem:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [TypeA, TypeB]
+      discriminator:
+        propertyName: type
+        mapping:
+          TypeA: &quot;#/components/schemas/TypeA&quot;
+          TypeB: &quot;#/components/schemas/TypeB&quot;
+
+    TypeA:
+      allOf:  // commonly used when extending a base schema
+        - $ref: &quot;#/components/schemas/BaseItem&quot;
+        - type: object
+          properties:
+            fieldA:
+              type: string
+
+    TypeB:
+      allOf:
+        - $ref: &quot;#/components/schemas/BaseItem&quot;
+        - type: object
+          properties:
+            fieldB:
+              type: integer</code></pre><p>✅ <strong>Advantages</strong>:</p><ul><li>Clearly identifies object type using <code>type</code>.</li><li>Improves validation and API documentation.</li><li>Better support in API code generators.</li></ul><h3>Example</h3><p>Open http://localhost:8080/swagger-ui.html to interact with the API.</p><pre><code class="language-java">// Base Interface &amp; Subclasses
+package com.example.openapi.model;
+
+import com.fasterxml.jackson.annotation.*;
+import io.swagger.v3.oas.annotations.media.DiscriminatorMapping;
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = &quot;type&quot;)
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = TypeA.class, name = &quot;TypeA&quot;),
+    @JsonSubTypes.Type(value = TypeB.class, name = &quot;TypeB&quot;)
+})
+@Schema(
+    description = &quot;BaseItem&quot;,
+    discriminatorProperty = &quot;type&quot;,
+    oneOf = {TypeA.class, TypeB.class},
+    discriminatorMapping = {
+        @DiscriminatorMapping(schema = TypeA.class, value = &quot;TypeA&quot;),
+        @DiscriminatorMapping(schema = TypeB.class, value = &quot;TypeB&quot;)
+    }
+)
+public abstract class BaseItem {
+    @Schema(description = &quot;Type of item&quot;, required = true, example = &quot;TypeA&quot;)
+    public String type;
+}
+
+@Schema(description = &quot;TypeA extends BaseItem&quot;)
+class TypeA extends BaseItem {
+    @Schema(description = &quot;Field specific to TypeA&quot;, example = &quot;some text&quot;)
+    public String fieldA;
+}
+
+@Schema(description = &quot;TypeB extends BaseItem&quot;)
+class TypeB extends BaseItem {
+    @Schema(description = &quot;Field specific to TypeB&quot;, example = &quot;42&quot;)
+    public int fieldB;
+}
+
+// REST Controller to Handle OpenAPI Requests
+package com.example.openapi.controller;
+
+import com.example.openapi.model.BaseItem;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping(&quot;/api/items&quot;)
+@Tag(name = &quot;Items&quot;, description = &quot;API for handling polymorphic OpenAPI requests&quot;)
+public class ItemController {
+
+    @PostMapping
+    @Operation(summary = &quot;Create an item&quot;, description = &quot;Accepts a polymorphic item with discriminator-based deserialization&quot;)
+    public ResponseEntity&lt;BaseItem&gt; createItem(@RequestBody BaseItem item) {
+        return ResponseEntity.ok(item);
+    }
+
+    @GetMapping
+    @Operation(summary = &quot;Get sample items&quot;, description = &quot;Returns a list of different item types&quot;)
+    public ResponseEntity&lt;List&lt;BaseItem&gt;&gt; getItems() {
+        // Example response
+        return ResponseEntity.ok(List.of(
+                new TypeA() {{ type = &quot;TypeA&quot;; fieldA = &quot;Example A&quot;; }},
+                new TypeB() {{ type = &quot;TypeB&quot;; fieldB = 123; }}
+        ));
+    }
+}</code></pre><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/json_schema.md</span></p>
+1737182757446	1686497988937	<p>How to find when a term/bug was introduced?</p>	<pre><code class="language-bash"># -S 'search-term': (also called &quot;pickaxe&quot;) filters commits to those that introduce or remove the given term.
+git log -S 'search-term'</code></pre><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/help/git.md</span></p>
+1737791849637	1686497988937	<p>Explain <code>Send</code> trait:</p>	<ul><li><code>Send</code> ensures <strong>safe ownership transfer</strong> of a type between threads.</li><li>Types implementing <code>Send</code> can safely be moved across thread boundaries.</li><li>Most types in Rust are <code>Send</code> unless they explicitly involve non-thread-safe structures.</li></ul><ol><li><p><strong>Ownership Transfer Across Threads:</strong></p><ul><li>A <code>Send</code> type can be moved from one thread to another. For example, a <code>Send</code> type stored in an<code>std::thread::spawn</code> closure will be safely transferred to the new thread.</li></ul></li><li><p><strong>Automatically Implemented:</strong></p><ul><li>Most types in Rust are <code>Send</code> by default if they don’t contain non-<code>Send</code> types.</li><li>For instance, primitive types like <code>i32</code>, <code>f64</code>, and thread-safe smart pointers like <code>Arc</code> and<code>Box</code> are all <code>Send</code>.</li></ul></li><li><p><strong>Non-<code>Send</code> Types:</strong></p><ul><li>A type will not implement <code>Send</code> if it contains data that is inherently not thread-safe, like:<ul><li><code>Rc&lt;T&gt;</code>: A reference-counted smart pointer that isn’t thread-safe, transferring it to
+another thread would lead to race conditions.</li><li><code>*const T</code> / <code>*mut T</code>: Raw pointers, because they can lead to undefined behavior if accessed
+across threads without synchronization.</li></ul></li><li>These types must be wrapped in thread-safe abstractions like <code>Arc</code> or <code>Mutex</code> to be sent
+between threads.</li></ul></li><li><p><strong>Zero-Cost Abstraction:</strong></p><ul><li>The <code>Send</code> trait is purely a marker trait. It has no runtime overhead or extra functionality —
+it's used by the compiler to enforce safety guarantees at compile time.</li></ul></li></ol><h3>Reasons Why a Type Might Not Be <code>Send</code></h3><p>A type is not <code>Send</code> when it contains non-thread-safe data or enforces single-threaded usage.</p><ol><li><strong>Shared Mutable State:</strong> Types that allow shared access to mutable data without proper
+synchronization are not <code>Send</code>.</li><li><strong>Non-Thread-Safe API:</strong> Types that are inherently tied to the thread in which they were
+created, such as thread-local storage or types bound to OS-specific resources, may not be<code>Send</code>.</li></ol><h4>Example <code>std::cell::RefCell</code>:</h4><ul><li>provides interior mutability but does not use synchronization primitives to ensure safety across
+threads.</li><li>designed for single-threaded use cases where borrowing rules are enforced dynamically at runtime
+instead of compile-time.</li><li>Runtime checks only ensure safety at the local level, i.e., within the same thread. When multiple
+threads access a shared resource, runtime checks cannot prevent data races without explicit
+synchronization</li></ul><pre><code class="language-rust">use std::cell::RefCell;
+use std::thread;
+
+fn main() {
+    let data = RefCell::new(42);
+
+    let handle = thread::spawn(move || {
+        // This would cause a compile error because RefCell is not Send
+        let mut value = data.borrow_mut();
+        *value += 1;
+    });
+
+    handle.join().unwrap();
+}</code></pre><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/rust/core/concurrency.md</span></p>
+1739771956551	1686497988937	<p>What are &quot;object-safe&quot; traits?</p>	<ol><li><strong>Trait objects are fat pointers</strong> - they contain both a data pointer and a vtable pointer</li><li><strong>Vtables have fixed layouts</strong> - the compiler can determine method offsets statically</li><li><strong>Object safety prevents vtable chaos</strong> - no generics means predictable vtable structure</li><li><strong>Runtime dispatch works</strong> - the same vtable layout works for all implementing types</li></ol><p>The vtable makes trait objects work - it's a compile-time-generated jump table that enables
+runtime polymorphism without the overhead of type checking at every method call.</p><p>The vtable contains all the information needed to work with the concrete type at
+runtime, even though the compile-time type information has been &quot;erased&quot; by the trait object.</p><pre><code>Trait Object: Box&lt;dyn Draw&gt;
+┌─────────────────┐
+│  data_ptr   ────┼──┐
+├─────────────────┤  │
+│  vtable_ptr ────┼──┼──┐
+└─────────────────┘  │  │
+                     │  │
+                     │  │
+┌────────────────────┘  │
+│                       │
+▼ ACTUAL DATA           │
+┌─────────────────┐     │
+│   Circle {      │     │
+│     radius: 5   │     │
+│   }             │     │
+└─────────────────┘     │
+                        │
+┌───────────────────────┘
+│
+▼ VTABLE (Static, Non-Generic)
+┌──────────────────────────┐
+│ Drop function ptr        │ ← Compiler-generated
+├──────────────────────────┤
+│ Size of concrete type    │ ← Circle: 8 bytes
+├──────────────────────────┤
+│ Alignment requirements   │ ← Circle: 8 byte align
+├──────────────────────────┤
+│ draw() method ptr   ────┼──┐
+└──────────────────────────┘  │
+                              │
+┌─────────────────────────────┘
+│
+▼ CONCRETE IMPLEMENTATION
+fn circle_draw(self: &amp;Circle) {
+    println!(&quot;Drawing circle with radius {}&quot;, self.radius);
+}
+
+MULTIPLE CONCRETE TYPES, SAME VTABLE LAYOUT
+============================================
+
+Circle vtable:          Rectangle vtable:       Triangle vtable:
+┌─────────────┐        ┌─────────────┐         ┌─────────────┐
+│ drop_circle │        │ drop_rect   │         │ drop_tri    │
+├─────────────┤        ├─────────────┤         ├─────────────┤
+│ size: 8     │        │ size: 16    │         │ size: 24    │
+├─────────────┤        ├─────────────┤         ├─────────────┤
+│ align: 8    │        │ align: 8    │         │ align: 8    │
+├─────────────┤        ├─────────────┤         ├─────────────┤
+│ circle_draw │        │ rect_draw   │         │ tri_draw    │
+├─────────────┤        ├─────────────┤         ├─────────────┤
+│ circle_area │        │ rect_area   │         │ tri_area    │
+└─────────────┘        └─────────────┘         └─────────────┘
+
+
+MEMORY SIZE BREAKDOWN:
+======================
+
+struct Circle {
+    radius: f64,    // 8 bytes
+}
+Total: 8 bytes
+
+struct Rectangle {
+    width: f64,     // 8 bytes
+    height: f64,    // 8 bytes
+}
+Total: 16 bytes
+
+struct Triangle {
+    a: f64,         // 8 bytes
+    b: f64,         // 8 bytes
+    c: f64,         // 8 bytes
+}
+Total: 24 bytes
+     ▲                      ▲                      ▲
+     │                      │                      │
+     └──────────────────────┼──────────────────────┘
+                            │
+                    SAME LAYOUT STRUCTURE
+                    (different function ptrs)
+
+struct Circle {
+    radius: f64,     // 8 bytes
+    color: u32,      // 4 bytes
+    // + 4 bytes padding for alignment
+}
+
+TRAIT OBJECT CREATION &amp; DISPATCH
+=================================
+
+1. COMPILE TIME:
+   let circle = Circle { radius: 5 };
+   let shape: Box&lt;dyn Draw&gt; = Box::new(circle);
+
+   Compiler generates vtable for Circle + Draw:
+   ┌──────────────────┐
+   │ Circle's vtable  │ ← Created once per type
+   └──────────────────┘
+
+2. RUNTIME:
+   shape.draw();
+
+   Assembly-like pseudocode:
+   mov rax, [shape + 8]     ; Load vtable_ptr
+   mov rbx, [rax + 24]      ; Load draw() from vtable[3]
+   mov rdi, [shape]         ; Load data_ptr as &amp;self
+   call rbx                 ; Call the function</code></pre><p>To understand <strong>why certain traits are &quot;object-safe&quot;</strong> in Rust, and what that means, you need to understand how<strong>trait objects</strong> work under the hood.</p><h3>What is a Trait Object?</h3><p>A <strong>trait object</strong> is a value of a type like <code>&amp;dyn Trait</code> or <code>Box&lt;dyn Trait&gt;</code> — it allows <strong>dynamic dispatch</strong> of
+methods via a <strong>vtable</strong> (virtual method table), rather than through compile-time monomorphization like with generics.</p><pre><code class="language-rust">fn process(shape: &amp;dyn Shape) {
+    shape.draw(); // dynamic dispatch
+}</code></pre><p>But <strong>not all traits</strong> can be turned into trait objects — only <strong>object-safe traits</strong> can.</p><h3>Object-Safe Trait Requirements</h3><ol><li><strong>Methods do not return <code>Self</code>.</strong></li><li><strong>Methods do not use generic type parameters.</strong></li></ol><h3>❌ Why <code>return Self</code> is <em>not</em> object-safe</h3><pre><code class="language-rust">trait Cloneable {
+    fn clone(&amp;self) -&gt; Self;
+}</code></pre><ul><li><code>Self</code> means &quot;the concrete type implementing the trait.&quot;</li><li>But at runtime, when we only have <code>&amp;dyn Cloneable</code>, the <strong>concrete type is erased</strong> — we don’t know what <code>Self</code> is.</li><li>Hence, we can't compile this safely because the <strong>return type is unknown</strong>.</li></ul><p>🔧 <strong>Solution</strong>: use <code>Box&lt;dyn Trait&gt;</code> if you want to return trait objects:</p><pre><code class="language-rust">trait Cloneable {
+    fn clone_box(&amp;self) -&gt; Box&lt;dyn Cloneable&gt;;
+}
+// associated implementation
+impl&lt;T&gt; Cloneable for T
+where
+    T: 'static + Clone + Cloneable,
+{
+    fn clone_box(&amp;self) -&gt; Box&lt;dyn Cloneable&gt; {
+        Box::new(self.clone())
+    }
+}</code></pre><p>Now it's object-safe because the return type is not <code>Self</code>, and is dynamically dispatchable.</p><ul><li>It returns a boxed trait object, not a concrete type.</li><li>The return type is Box<dyn Cloneable>, which is statically known and does not depend on Self.</li></ul><h3>❌ Why generic methods are <em>not</em> object-safe</h3><pre><code class="language-rust">trait Saver {
+    fn save&lt;T: Serialize&gt;(&amp;self, data: &amp;T);
+}</code></pre><ul><li>A trait object like <code>&amp;dyn Saver</code> must <strong>have a fixed vtable</strong> at runtime.</li><li>But <code>save&lt;T&gt;</code> is a <strong>generic method</strong> — it could compile into many different versions depending on <code>T</code>.</li><li>The compiler cannot generate a single vtable entry for all <code>T</code>.</li></ul><p>🔧 <strong>Solution</strong>: move the generic type out of the method:</p><pre><code class="language-rust">trait Saver {
+    fn save(&amp;self, data: &amp;dyn Serialize); // now object-safe
+}</code></pre><h3>🧠 Mental Model</h3><p>Think of a trait object as a <strong>pointer to data + pointer to a vtable</strong>. That vtable must be fixed and non-generic.</p><p>Object safety ensures that:</p><ul><li>The compiler can <strong>statically determine method layouts</strong>.</li><li>The trait methods can be called <strong>without knowing the concrete type</strong>.</li></ul><p>If a trait violates these rules, it means you need <strong>compile-time monomorphization</strong>, not <strong>runtime polymorphism</strong>.</p><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/rust/core/traits.md</span></p>
+1746458994880	1686497988937	<p>When does a KTable emit an event?</p>	<p>A KTable emits events whenever there is an update to its underlying state:</p><ul><li>Insertions: When a new key-value pair is added to the KTable, an event is emitted.</li><li>Updates: When an existing key in the KTable is updated with a new value, an event is emitted reflecting the change.</li><li>Deletions: When a key is removed from the KTable, an event is emitted to indicate the deletion.</li></ul><p>If a KTable is built from an input topic, it will only emit an event when there is an actual change to the state of the KTable.
+This means that if an event from the input topic does not result in a change (e.g., the new value for a key is identical to the existing value in the KTable), the KTable will not emit an event.</p><ul><li>If the value for the key is different from the current value in the KTable: The KTable updates its state and emits an event reflecting the change.</li><li>If the value for the key is the same as the current value in the KTable: The KTable does not update its state and does not emit an event, as there is no effective change.</li></ul><p>This optimization helps reduce unnecessary downstream processing and ensures that only meaningful changes are propagated.</p><h3>✅ A <code>KTable</code> emits an event:</h3><ol><li><p><strong>When the source topic receives a new record</strong> with:</p><ul><li>a <strong>key already present</strong> in the <code>KTable</code>, and</li><li>the <strong>value is different</strong> (by default, determined via <code>equals()</code>).</li></ul></li><li><p><strong>When a new key</strong> is added to the <code>KTable</code>.</p></li><li><p><strong>When a key is deleted</strong>, i.e., a <code>null</code> value is written for that key — this is interpreted as a tombstone and emitted.</p></li></ol><h3>❌ A <code>KTable</code> does <strong>not emit</strong>:</h3><ul><li>When an update is made with the <strong>same value</strong> (again, determined via <code>equals()</code>).</li><li>If a <code>ValueTransformer</code> or aggregation function does not produce a change.</li></ul><pre><code class="language-java">KTable&lt;String, String&gt; users = builder.table(&quot;users&quot;);</code></pre><h4>Input Topic (<code>users</code>):</h4><table><thead><tr>  <th>Key</th>  <th>Value</th>  <th>Emitted from KTable?</th></tr></thead><tbody><tr>  <td>A</td>  <td>Alice</td>  <td>✅ Yes</td></tr><tr>  <td>A</td>  <td>Alice</td>  <td>❌ No (same value)</td></tr><tr>  <td>A</td>  <td>Alicia</td>  <td>✅ Yes (value change)</td></tr><tr>  <td>A</td>  <td>null</td>  <td>✅ Yes (tombstone)</td></tr></tbody></table><h3>What I said earlier:</h3><blockquote><p>A <strong>KTable emits</strong> an update <strong>when its value changes</strong> (i.e., a new value is computed at a key).</p></blockquote><p>This is true <strong>in the context of internal processing</strong>, particularly when using <code>.aggregate()</code>, <code>.mapValues()</code>, or other transformations — <em>Kafka Streams will avoid forwarding an update if the value didn't change</em> (based on <code>Objects.equals()</code> by default).</p><h3>But in your test:</h3><pre><code class="language-java">staticInputTopic.pipeInput(RECORD_KEY, chargingPoiEvent1);
+staticInputTopic.pipeInput(RECORD_KEY, chargingPoiEvent2);</code></pre><p>Even though <code>chargingPoiEvent1.equals(chargingPoiEvent2)</code>:</p><ul><li><strong>Kafka Streams reprocesses the record</strong> because a new message was received.</li><li>The downstream <code>join()</code> recomputes the result and <strong>emits it</strong>, even if the join result is equal to the previous one.</li></ul><h3>Why? Because:</h3><ol><li><strong>KTables do not suppress identical records unless explicitly told to</strong> via <code>.suppress(Suppressed.untilChanged())</code>.</li><li><strong>Joins are recomputed on every side input change</strong>, and the result is emitted unless suppressed.</li></ol><h3>So, to reconcile:</h3><table><thead><tr>  <th>Scenario</th>  <th>Emits?</th>  <th>Explanation</th></tr></thead><tbody><tr>  <td><code>.aggregate()</code> with same value</td>  <td>❌ No</td>  <td>Internally skips re-emitting unless result differs.</td></tr><tr>  <td><code>.table()</code> re-processing same value</td>  <td>✅ Yes</td>  <td>Still triggers downstream joins or subscriptions.</td></tr><tr>  <td><code>.join()</code> on KTable with same right side</td>  <td>✅ Yes</td>  <td>Recomputes and emits result unless <code>.suppress()</code> is used.</td></tr></tbody></table><ul><li><strong>Kafka Streams forwards new records, not just new values</strong>.</li><li><strong>Suppressing output based on equality is <em>not</em> automatic</strong> — you must use <code>.suppress()</code> for that behavior.</li><li>So the previous answer is <strong>accurate</strong>, but applies to <em>some internal operators</em>. Your test shows what happens without suppressing.</li></ul><h3>📘 Official Documentation on <code>KTable</code> Emission Behavior</h3><h4>1. <strong>KTable as a Changelog Stream</strong></h4><p>The <a href="https://docs.confluent.io/platform/current/streams/concepts.html#ktable">Kafka Streams documentation</a> describes a <code>KTable</code> as an abstraction of a changelog stream, where each data record represents an update:([Confluent Documentation][1])</p><blockquote><p>&quot;A KTable is an abstraction of a changelog stream, where each data record represents an update. More precisely, the value in a data record is interpreted as an 'UPDATE' of the last value for the same record key, if any (if a corresponding key doesn’t exist yet, the update will be considered an INSERT).&quot;([Confluent Documentation][1])</p></blockquote><p>This means that <strong>every new record</strong>, even if it has the same value as the previous one for a given key, is treated as an update and thus can trigger downstream emissions.</p><h4>2. <strong>Emission on Every Update</strong></h4><p>In the <a href="https://kafka.apache.org/23/javadoc/org/apache/kafka/streams/kstream/KTable.html">KTable JavaDoc</a>, it's noted:([Apache Kafka][2])</p><blockquote><p>&quot;Each record in this changelog stream is an update on the primary-keyed table with the record key as the primary key.&quot;([Apache Kafka][2])</p></blockquote><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/kafka-stream.md</span></p>
+1746803169861	1686497988937	<p>Explain CDLS usage of OpenSearch synthetic source:</p>	<p>Traditionally, Elasticsearch stores the original JSON document in the <code>_source</code> field.
+While convenient for retrieval, this can consume significant storage and impact performance.</p><p>With Synthetic Source, the <code>_source</code> is no longer stored but is reconstructed from indexed fields on demand. This approach brings:</p><ul><li>Lower storage usage</li><li>Faster ingestion times</li></ul><p>Most users will not notice any difference in Kibana or dashboards. However, here are a few things to be aware of:</p><ul><li>Discover Tab / JSON View: The source shown in Kibana will look the same, but it's now generated from mappings - not stored directly.</li><li>Case-insensitive keyword search is not longer possible</li><li>Unmapped fields are ignored: Only fields that exist in the mapping will appear in the synthetic <code>_source</code>.</li><li>Debugging edge cases: In rare scenarios where field values were malformed or inconsistent, they may now be silently dropped rather than stored.</li><li>No runtime fields on <code>_source</code> as any operation relying on them will be impossible</li></ul><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/help/opensearch.md</span></p>
+1748353212051	1686497988937	<p>Explain:</p><pre><code class="language-yaml">dependency &quot;los_caps&quot; {
+  config_path = &quot;../los-caps&quot;
+  mock_outputs = {
+    tg_arn_suffix = &quot;REAL_VALUE_KNOWN_DURING_APPLY&quot;
+  }
+}</code></pre>	<ol><li><p><strong>Dependency Block</strong>:</p><pre><code class="language-hcl">dependency &quot;los_caps&quot; {
+  config_path = &quot;../los-caps&quot;
+}</code></pre><ul><li><strong>dependency &quot;los_caps&quot;</strong>: allow to reference outputs from other modules or configurations.</li></ul></li><li><p><strong>mock_outputs</strong>:</p><pre><code class="language-hcl">mock_outputs = {
+  tg_arn_suffix = &quot;REAL_VALUE_KNOWN_DURING_APPLY&quot;
+}</code></pre><ul><li><strong>mock_outputs</strong>: This is a way to define expected outputs from the dependency that may not be available at the time of planning or applying the configuration. It allows you to specify placeholder values for outputs that will be resolved during the actual apply phase.</li><li><strong>tg_arn_suffix = &quot;REAL_VALUE_KNOWN_DURING_APPLY&quot;</strong>: <code>&quot;REAL_VALUE_KNOWN_DURING_APPLY&quot;</code> is placeholder indicating that the actual value will be determined when the configuration is applied.</li></ul></li></ol><h3>Purpose of <code>mock_outputs</code></h3><p>The <code>mock_outputs</code> feature is particularly useful in scenarios where:</p><ul><li>You want to ensure that your configuration can be validated and planned without needing the actual outputs from the dependency.</li><li>You are working in a development or testing environment where the actual resources may not yet exist.</li><li>You want to avoid circular dependencies by providing mock values that can be replaced with real values during the apply phase.</li></ul><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/help/terragrunt.md</span></p>
+1756965820894	1686497988937	<p>Explain Primitives versus Wrappers:</p>	<ul><li><p><strong>Primitive (<code>int</code>)</strong>:</p><ul><li>Stored directly in memory (fast, small: 4 bytes).</li><li>Cannot be <code>null</code> (default = <code>0</code>).</li><li>Best for arithmetic and performance-critical code.</li></ul></li><li><p><strong>Wrapper (<code>Integer</code>)</strong>:</p><ul><li>Object holding a primitive (extra memory + slower).</li><li>Can be <code>null</code>.</li><li>Required for generics (<code>List&lt;Integer&gt;</code>), nullable values, and APIs expecting objects.</li><li>Provides utility methods (<code>parseInt</code>, <code>toString</code>, etc.).</li></ul></li><li><p><strong>Boxing</strong>: primitive → wrapper (<code>int</code> → <code>Integer</code>).
+moving a primitive value into a heap-allocated object (wrapper).</p></li><li><p><strong>Unboxing</strong>: wrapper → primitive (<code>Integer</code> → <code>int</code>).
+extracting the raw primitive from that object.</p></li><li><p><strong>Autoboxing/unboxing</strong>: automatic conversion by the compiler.</p></li></ul><p><strong>Rule of thumb</strong>:
+Use primitives for calculations. Use wrappers when you need <code>null</code>, collections, or object APIs.</p><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/help/java/java.md</span></p>
+1756965821034	1686497988937	<p>Explaint AWS metrics heartbeat pattern:</p>	<p>This pattern is robust for “must-happen-once-per-day” signals and scales well to “at least N per
+day” by adjusting only the threshold.</p><ul><li><p><strong>Source metric (<code>m1</code>)</strong>: your counter/heartbeat metric, aggregated with <code>Sum</code> over a <strong>1-day period (86 400s)</strong>.</p></li><li><p><strong>Math series (<code>e1</code>)</strong>: <code>FILL(m1, 0)</code> converts <em>MISSING</em> daily buckets (no datapoints that day) to <code>0</code>.</p></li><li><p><strong>Alarm logic</strong>: <code>LessThanThreshold</code> with <code>threshold = 1</code>.</p><ul><li>If anything was published → day’s sum ≥ 1 → <strong>OK</strong></li><li>If nothing published → <code>e1 = 0</code> → <strong>ALARM</strong></li></ul></li><li><p><strong><code>return_data</code></strong>: mark only the <strong>math series</strong> as <code>true</code> so the alarm evaluates <em>that</em> series.</p></li><li><p><strong><code>treat_missing_data = &quot;ignore&quot;</code></strong>: safe because the math series always yields a number.</p></li></ul><pre><code class="language-hcl"># Example inputs
+locals {
+  powertools_namespace = &quot;MyApp/Powertools&quot;
+  pipeline_prefix      = &quot;pcv-pipeline&quot;
+}
+
+resource &quot;aws_sns_topic&quot; &quot;pcv_team_topic&quot; {
+  name = &quot;pcv-team-alerts&quot;
+}
+
+resource &quot;aws_cloudwatch_metric_alarm&quot; &quot;daily_pcv_publish_heartbeat&quot; {
+  alarm_name          = &quot;pcv-file-published--daily-heartbeat&quot;
+  alarm_description   = &quot;Alarms if no pcv-file-published metric was emitted in the last UTC day.&quot;
+  comparison_operator = &quot;LessThanThreshold&quot;
+  evaluation_periods  = 1
+  threshold           = 1
+  treat_missing_data  = &quot;ignore&quot;
+  alarm_actions       = [aws_sns_topic.pcv_team_topic.arn]
+  ok_actions          = [aws_sns_topic.pcv_team_topic.arn]
+
+  # 1) Source metric (not directly evaluated)
+  metric_query {
+    id           = &quot;m1&quot;
+    return_data  = false
+    metric {
+      namespace   = local.powertools_namespace
+      metric_name = &quot;pcv-file-published&quot;
+      # The 1-day rollup. Buckets are aligned to UTC day boundaries.
+      period      = 86400
+      stat        = &quot;Sum&quot;
+      unit        = &quot;Count&quot;
+      dimensions = {
+        service = local.pipeline_prefix
+      }
+    }
+  }
+
+  # 2) Math series: force a value each day (0 when missing)
+  metric_query {
+    id          = &quot;e1&quot;
+    expression  = &quot;FILL(m1, 0)&quot;
+    label       = &quot;pcv-file-published--daily-sum-filled&quot;
+    return_data = true
+  }
+}</code></pre><h4>Why two <code>metric_query</code> blocks?</h4><ul><li><code>m1</code>: defines the <strong>real metric</strong> and how to aggregate it (Sum over 1 day). <code>return_data = false</code>⇒ helper only.</li><li><code>e1</code>: defines <strong>what the alarm actually evaluates</strong>. <code>FILL(m1, 0)</code> yields a numeric value even
+when <code>m1</code> is missing. <code>return_data = true</code> ⇒ alarm uses this series.</li></ul><h4>When does <code>FILL(..., 0)</code> produce <code>0</code>?</h4><ul><li>If the source bucket has <strong>no datapoint</strong> → <code>m1</code> is <strong>MISSING</strong> → <code>FILL(m1, 0)</code> returns <strong>0</strong>.</li><li>If at least one datapoint exists → <code>m1</code> equals the <strong>Sum</strong> of that day → <code>FILL</code> returns that sum unchanged.</li></ul><h4>Operational notes &amp; gotchas</h4><ul><li><strong>UTC boundaries</strong>: 86 400-second periods align to UTC midnight. Ensure your producers emit with
+timestamps landing inside the intended day.</li><li><strong>Datapoint timing</strong>: With this math, CloudWatch evaluates deterministically each day; you won’t
+get stuck in <code>INSUFFICIENT_DATA</code>.</li><li><strong>Units</strong>: Set <code>unit = &quot;Count&quot;</code> if that’s how you publish; mismatched units can make graphs
+confusing.</li><li><strong>Multiple required events/day</strong>: Increase <code>threshold</code>. Example: require ≥3 publishes/day ⇒<code>threshold = 3</code>.</li><li><strong>Rolling windows</strong>: For a 7-day heartbeat, either (a) keep <code>period = 86400</code>, <code>evaluation_periods = 7</code>, <code>datapoints_to_alarm = 1</code> (alarm if any of the last 7 days is zero) or (b) sum a wider
+range via additional math if you need a true rolling sum.</li></ul><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/help/aws/cloudwatch.md</span></p>
+1757309867700	1686497988937	<p>Explain deref coercion in method resolution:</p>	<p>This is one of the most ergonomic parts of <code>Deref</code> + <code>DerefMut</code>: they hook into <strong>method call
+resolution</strong>.</p><p>When you call a method like:</p><pre><code class="language-rust">my_box.some_method()</code></pre><p>the compiler checks:</p><ol><li><p>Does <code>MyBox</code> itself implement <code>some_method</code>?</p><ul><li>If yes → call it.</li></ul></li><li><p>If not, and <code>MyBox: Deref&lt;Target = U&gt;</code>, check if <code>U</code> implements <code>some_method</code>.</p><ul><li>If yes → implicitly insert <code>(*my_box).some_method()</code>.</li></ul></li><li><p>If still not found and you have <code>DerefMut</code>, the same applies for mutable methods.</p></li></ol><p>This is called <strong>deref coercion in method resolution</strong>.</p><pre><code class="language-rust">use std::ops::{Deref, DerefMut};
+
+struct MyBox&lt;T&gt;(T);
+
+impl&lt;T&gt; Deref for MyBox&lt;T&gt; {
+    type Target = T;
+    fn deref(&amp;self) -&gt; &amp;Self::Target {
+        &amp;self.0
+    }
+}
+
+impl&lt;T&gt; DerefMut for MyBox&lt;T&gt; {
+    fn deref_mut(&amp;mut self) -&gt; &amp;mut Self::Target {
+        &amp;mut self.0
+    }
+}
+
+fn main() {
+    let mut b = MyBox(String::from(&quot;Hello&quot;));
+
+    // Calls String::len via Deref
+    println!(&quot;Length = {}&quot;, b.len());
+
+    // Calls String::push_str via DerefMut
+    b.push_str(&quot; World&quot;);
+
+    println!(&quot;{b}&quot;);
+}</code></pre><p>Output:</p><pre><code>Length = 5
+Hello World</code></pre><p>What happened?</p><ul><li><code>b.len()</code> → <code>MyBox</code> doesn’t have <code>len()</code>.
+Rust sees <code>MyBox: Deref&lt;Target=String&gt;</code>, so it tries <code>String::len(&amp;*b)</code>.</li><li><code>b.push_str(&quot; World&quot;)</code> → mutable method, so Rust uses <code>DerefMut</code> to get <code>&amp;mut String</code>, then calls<code>String::push_str</code>.</li></ul><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/rust-concepts.md</span></p>
+1757313441504	1686497988937	<p>Explain Interaction Tests:</p>	<p>Interaction tests are a type of unit test that verify how a class collaborates with its
+dependencies, usually with mocks and <code>verify()</code>. Instead of checking outputs or state, they check
+that the right methods are called on collaborators.</p><pre><code class="language-java">verify(paymentService).charge(order.getTotal());</code></pre><p><strong>Why use sparingly:</strong></p><ol><li><p><strong>Brittle</strong> – They fail when you refactor implementation details, even if behavior hasn’t changed.</p><ul><li>Example: switching from <code>paymentService.charge()</code> to <code>billingService.processPayment()</code> breaks
+the test, though the outcome (customer charged) is the same.</li></ul></li><li><p><strong>Coupled to implementation</strong> – They tie tests to <em>how</em> work is done, not <em>what</em> the system
+achieves. This makes refactoring painful.</p></li><li><p><strong>Noise</strong> – Too many <code>verify()</code> calls add little business value and create failing tests for
+non-functional reasons.</p></li></ol><p><strong>When they make sense:</strong></p><ul><li><p>For <strong>orchestration code</strong> where behavior <em>is</em> the interaction.</p><ul><li>Example: <code>OrderService.placeOrder()</code> must call <code>paymentService.charge()</code> and<code>emailService.sendConfirmation()</code>.</li></ul></li><li><p>When a unit has no meaningful output or state except its calls to collaborators.</p></li><li><p>To ensure <strong>side effects</strong> happen (e.g., one database write, one message sent).</p></li></ul><p><strong>Better default:</strong>Use <strong>state-based tests</strong> where possible — assert on returned values or persisted state.</p><pre><code class="language-java">Order order = service.placeOrder(&quot;item1&quot;);
+assertEquals(OrderStatus.PAID, order.getStatus());</code></pre><h4>Example</h4><pre><code class="language-java">class OrderService {
+    private final PaymentService paymentService;
+    private final EmailService emailService;
+
+    OrderService(PaymentService paymentService, EmailService emailService) {
+        this.paymentService = paymentService;
+        this.emailService = emailService;
+    }
+
+    void placeOrder(Order order) {
+        paymentService.charge(order.getTotal());
+        emailService.sendConfirmation(order.getId());
+    }
+}</code></pre><pre><code class="language-java">import org.junit.jupiter.api.Test;
+
+import static org.mockito.Mockito.*;
+
+class OrderServiceTest {
+
+    @Test
+    void placeOrder_ChargesCustomerAndSendsEmail() {
+        // Arrange
+        PaymentService paymentService = mock(PaymentService.class);
+        EmailService emailService = mock(EmailService.class);
+        OrderService orderService = new OrderService(paymentService, emailService);
+        Order order = new Order(&quot;123&quot;, 50.0);
+
+        // Act
+        orderService.placeOrder(order);
+
+        // Assert
+        verify(paymentService).charge(50.0);
+        verify(emailService).sendConfirmation(&quot;123&quot;);
+        verifyNoMoreInteractions(paymentService, emailService);
+    }
+}</code></pre><p>Breakdown:</p><ul><li><strong>Object under test:</strong> <code>OrderService</code></li><li><strong>Mocks:</strong> <code>PaymentService</code> and <code>EmailService</code> (dependencies).</li><li><strong>Arrange:</strong> Set up mocks and the <code>OrderService</code> instance.</li><li><strong>Act:</strong> Call the method under test: <code>placeOrder(order)</code>.</li><li><strong>Assert:</strong> Verify interactions: <code>charge()</code> and <code>sendConfirmation()</code> were invoked with the right arguments.</li></ul><p>This shows clearly:</p><ul><li>You are not testing <code>PaymentService</code> or <code>EmailService</code> (they’re mocked).</li><li>You are testing that <strong><code>OrderService</code> orchestrates its collaborators correctly</strong>.</li></ul><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/tdd.md</span></p>
+1757482783526	1686497988937	<p>Explain truststore versus keystore:</p>	<ul><li>“Trust stores contain public, trusted, root (CA) certs, whereas identity/key stores contain
+private, identity certs.”</li><li>“The keystore will be used for encrypting/signing something with your private key while the trust
+stores will be used mostly to authenticate remote servers etc.”</li></ul><h3>Usage in SSL/TLS Communication</h3><p><strong>During an SSL handshake</strong> (e.g., HTTPs):</p><ul><li><p><strong>Server</strong> uses its <strong>keystore</strong>:</p><ul><li>Presents its public certificate and proves ownership via its private key.</li><li>Keystore is referenced through <code>javax.net.ssl.keyStore</code>, <code>...keyStorePassword</code>, and optionally <code>...keyStoreType</code>.</li></ul></li><li><p><strong>Client</strong> uses its <strong>truststore</strong>:</p><ul><li>Verifies the server’s certificate against trusted certificates stored there.</li><li>Referenced via <code>javax.net.ssl.trustStore</code>, <code>...trustStorePassword</code>, and optionally <code>...trustStoreType</code>.</li></ul></li><li><p>In <strong>mutual (two-way) SSL/TLS</strong>, both parties use keystore and truststore:</p><ul><li>Client presents its certificate from its <strong>keystore</strong>.</li><li>Server verifies it against its <strong>truststore</strong>.</li></ul></li><li><p>Although both stores technically share the same file formats (e.g., JKS or PKCS12), it’s
+recommended to keep them <strong>separate</strong> for clarity and better security hygiene.</p></li></ul><h3>1. Keystore</h3><ul><li><strong>Purpose</strong>: The keystore is used to store private keys and the associated certificates
+(certificate chains) required for <strong>authentication</strong>.</li><li><strong>Contains</strong>:<ul><li><strong>Private keys</strong>: These are used for the server or client’s own identity.</li><li><strong>Certificate chains</strong>: This includes the certificate for the entity (e.g., server or client)
+and any intermediate certificates required to establish a full chain of trust to a root CA.</li></ul></li><li><strong>Usage</strong>:<ul><li>The keystore is used in scenarios where the application needs to <strong>prove its identity</strong> to a
+client or another server (e.g., during HTTPS/TLS handshakes).</li><li>For example, a server running on HTTPS needs a keystore to hold its SSL certificate and private
+key, enabling clients to verify the server’s identity.</li></ul></li></ul><ul><li><strong>Default keystore</strong>: There is no default; you must explicitly configure one.</li></ul><p>A single certificate (e.g., your server’s certificate) is <strong>not sufficient</strong> to prove your identity
+to clients.</p><ul><li>Your server’s certificate is <strong>issued by an intermediate Certificate Authority (CA)</strong>.</li><li>That intermediate CA’s certificate is, in turn, issued by another CA, and so on — until a<strong>trusted root CA</strong>.</li></ul><pre><code>                 [ Root CA Certificate ]
+                 (Trusted by clients)
+                          │
+                          ▼
+             [ Intermediate CA Certificate ]
+                  (Issued by Root CA)
+                          │
+                          ▼
+             [ Server Certificate + Private Key ]
+                   (Issued by Intermediate CA)</code></pre><p><strong>The client needs the full chain (except the root)</strong></p><ul><li><p>it walks the chain:</p><ul><li>“This server cert is signed by Intermediate CA X.”</li><li>“Intermediate CA X is signed by Root CA Y.”</li><li>“Root CA Y is in my trust store — OK, trusted.”</li></ul></li></ul><pre><code>Keystore
+│
+├─ Private Key (server.key)
+├─ Server Certificate (server.crt)
+└─ Intermediate CA Certificate(s)</code></pre><p>If the server <strong>only sent its leaf certificate</strong>, the client would fail validation because it
+wouldn’t know how to link it back to a trusted root.</p><p>The <strong>keystore</strong> needs to contain:</p><ul><li>The <strong>private key</strong> for your identity (e.g., your domain).</li><li>The <strong>certificate</strong> corresponding to that private key.</li><li>The <strong>intermediate certificates</strong> (the chain up to the root).</li></ul><h3>2. Truststore</h3><ul><li><strong>Purpose</strong>: The truststore is used to store <strong>trusted certificates</strong> (public keys) from other
+parties or Certificate Authorities (CAs) that the application trusts.</li><li><strong>Contains</strong>:<ul><li><strong>Public keys of trusted CAs or servers</strong>: These certificates are used to validate the identity
+of remote servers or clients.</li><li><strong>Root and intermediate CA certificates</strong>: These are used to validate certificate chains
+presented by others.</li></ul></li><li><strong>Usage</strong>:<ul><li>The truststore is used when the application needs to <strong>verify the identity</strong> of a remote party,
+such as during client authentication in an HTTPS/TLS handshake.</li><li>For example, a client connecting to an HTTPS server will use a truststore to verify the
+server’s certificate by checking if it’s signed by a CA in the truststore.</li></ul></li></ul><ul><li><strong>Default truststore</strong>: Java includes a prebuilt truststore (<code>cacerts</code>) containing certificates
+of common CAs, located in the JRE/JDK’s <code>lib/security</code> directory.</li></ul><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/help/certificates.md</span></p>
+1758358945793	1686497988937	<p>Explain Python EntryPoints in context of Plugin architecture:</p>	<p>The <strong>main application</strong> defines a <strong>named entry point group</strong> (e.g. <code>&quot;myapp.plugins&quot;</code>) as part of
+its plugin API contract. That group name is essentially the “namespace” under which plugins
+register themselves.</p><ul><li>The app never needs to declare entry points in its own <code>pyproject.toml</code>; it only needs to decide
+on and consistently use the group name in its discovery code.</li><li>Each <strong>plugin package</strong> then declares one or more entries under that group in its<code>pyproject.toml</code>.</li></ul><p>So the workflow is:</p><ol><li><strong>Main app</strong>: chooses a group name and looks up <code>entry_points(group=&quot;myapp.plugins&quot;)</code>.</li><li><strong>Plugins</strong>: advertise themselves under that exact group name.</li><li><strong>Discovery</strong>: at runtime, the app asks for that group and loads whatever is installed.</li></ol><p><strong>Concept</strong>Entry points are a setuptools mechanism for declaring and discovering pluggable components.
+Packages advertise objects (classes, functions, factories) under named <strong>groups</strong> in their
+metadata. Other code can then query these groups and load the objects dynamically.</p><p><strong>How it works</strong></p><ol><li><p><strong>Declaration</strong> – myplugin package declares entry points in its <code>pyproject.toml</code>:</p><pre><code class="language-toml">[project]
+name = &quot;myplugin&quot;
+version = &quot;0.1&quot;
+
+[project.entry-points.&quot;myapp.plugins&quot;]
+hello = &quot;myplugin.hello:HelloPlugin&quot;</code></pre><p>Here, <code>myplugin</code> registers <code>HelloPlugin</code> under the <code>myapp.plugins</code> group.</p></li><li><p><strong>Installation metadata</strong> – When installed, this information is written into the package’s<code>.dist-info/entry_points.txt</code>.</p></li><li><p><strong>Discovery</strong> – At runtime, <code>importlib.metadata.entry_points</code> scans all installed distributions
+on <code>sys.path</code>, reads their entry point metadata, and returns matches for a given group.</p><pre><code class="language-python">from importlib.metadata import entry_points
+
+for ep in entry_points(group=&quot;myapp.plugins&quot;):
+    plugin_cls = ep.load()   # Import object
+    plugin_cls().run()</code></pre></li></ol><p><strong>Why useful for plugins</strong></p><ul><li><strong>Decoupled extensibility</strong>: core application only defines the group name and expected interface;
+third-party packages can extend it.</li><li><strong>No manual scanning</strong>: discovery is environment-wide, not filesystem-based.</li><li><strong>Ecosystem building</strong>: plugins can be distributed via PyPI, versioned, and installed
+independently.</li></ul><h3><strong>Illustrative example</strong></h3><h4>Core app: <code>myapp</code></h4><p><code>myapp/main.py</code></p><pre><code class="language-python">from importlib.metadata import entry_points
+
+def load_plugins():
+    for ep in entry_points(group=&quot;myapp.plugins&quot;):
+        plugin = ep.load()()
+        plugin.run()
+
+if __name__ == &quot;__main__&quot;:
+    load_plugins()</code></pre><p><code>pyproject.toml</code> (core app doesn’t usually declare entry points, only defines itself):</p><pre><code class="language-toml">[project]
+name = &quot;myapp&quot;
+version = &quot;0.1&quot;
+dependencies = []</code></pre><h4>Plugin: <code>myplugin</code></h4><p><code>myplugin/hello.py</code></p><pre><code class="language-python">class HelloPlugin:
+    def run(self):
+        print(&quot;Hello from plugin!&quot;)</code></pre><p><code>pyproject.toml</code></p><pre><code class="language-toml">[project]
+name = &quot;myplugin&quot;
+version = &quot;0.1&quot;
+dependencies = []
+
+[project.entry-points.&quot;myapp.plugins&quot;]
+hello = &quot;myplugin.hello:HelloPlugin&quot;</code></pre><p>With both installed in the same environment, running <code>python -m myapp.main</code> will discover the entry
+point defined by <code>myplugin</code> and execute it, without any explicit import in <code>myapp</code>.</p><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/help/python-packaging.md</span></p>
+1758696231518	1686497988937	<p>Explain Kafka Tombstone:</p>	<p>Within <strong>Kafka itself</strong>, a tombstone is just a record with:</p><ul><li><strong>Key:</strong> non-null</li><li><strong>Value:</strong> <code>null</code></li></ul><p>Kafka does not assign any &quot;delete&quot; semantics beyond this. Its only <strong>built-in behavior</strong> is:</p><ul><li>On a <strong>compacted topic</strong>, log compaction will eventually remove older records for that key,
+keeping only the latest record.</li><li>If the latest record for a key is a tombstone (<code>value = null</code>), Kafka will eventually drop the
+key entirely during compaction.</li></ul><p>Outside of that, <strong>Kafka does nothing special</strong> — the broker just stores and delivers tombstone
+records like any other.</p><p>It’s up to **applications to decide how to interpret them:</p><ul><li>As a signal to delete data from a cache/DB.</li><li>As an event marker (e.g., &quot;user removed&quot;).</li><li>Or to ignore them completely.</li></ul><h3>1. <strong>Produce a tombstone</strong></h3><p>Application sends a record with a <strong>non-null key</strong> and a <strong>null value</strong>.</p><pre><code class="language-java">kafkaTemplate.send(&quot;users&quot;, &quot;user-123&quot;, null);</code></pre><p>Kafka stores it in the topic log just like any other record.</p><h3>2. <strong>Consume the tombstone</strong></h3><p>Consumers see it immediately.</p><pre><code class="language-java">@KafkaListener(topics = &quot;users&quot;)
+public void listen(ConsumerRecord&lt;String, User&gt; record) {
+    if (record.value() == null) {
+        // tombstone → remove key from state
+        userCache.remove(record.key());
+    }
+}</code></pre><p>Applications decide how to react. Kafka itself doesn’t enforce “delete.”</p><h3>3. <strong>Log compaction</strong></h3><ul><li><p>Periodically, Kafka compacts the log.</p></li><li><p>For each key, only the <strong>latest record</strong> is retained.</p></li><li><p>If the latest record is a tombstone:</p><ul><li>Kafka <strong>keeps the tombstone</strong> for a configurable retention period
+(<code>log.cleanup.policy=compact</code>, <code>delete.retention.ms</code>).</li></ul></li><li><p>After that retention period, the tombstone is <strong>discarded</strong>, and the key disappears from the log.</p></li></ul><p>This ensures:</p><ul><li>Consumers who come online shortly after the tombstone still see it and can process the delete.</li><li>Long-term, storage isn’t wasted keeping deleted keys.</li></ul><h3>4. <strong>Resulting state</strong></h3><ul><li><p>Before compaction:</p><pre><code>(&quot;user-123&quot;, {...})
+(&quot;user-123&quot;, null)   ← tombstone</code></pre></li><li><p>After compaction + tombstone retention expiry:</p><pre><code>(no record for &quot;user-123&quot;)</code></pre></li></ul><p>So, the lifecycle is: <strong>produce → consume → compact → expire → gone</strong>.</p><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/kafka.md</span></p>
+1758696231519	1686497988937	<p>Explain tombstone handling in streams versus regular Kafka:</p>	<ul><li><strong>listeners</strong> require you to act on <code>null</code> values;</li><li><strong>Streams <code>KTable</code></strong> treats tombstones as first-class deletes in its state and propagation.</li></ul><p>Streams assigns <strong>delete semantics</strong> to tombstones for table-like abstractions and state stores.</p><h3>KTable / GlobalKTable</h3><ul><li><p>Reading a compacted topic as a <code>KTable</code>:</p><ul><li><code>value == null</code> ⇒ <strong>delete key</strong> from the underlying state store (e.g., RocksDB).</li><li>A tombstone is <strong>forwarded downstream</strong> and written to the table’s <strong>changelog</strong> (also compacted).</li></ul></li><li><p>State restoration:</p><ul><li>On restart/rebalance, the changelog’s tombstones are applied ⇒ deleted keys are <strong>not restored</strong>.</li></ul></li></ul><h3>KStream</h3><ul><li>A <code>KStream</code> simply forwards the record (including <code>null</code> values). No state is deleted unless<strong>you</strong> materialize and define that behavior.</li></ul><h3>Joins and Aggregations (table semantics)</h3><ul><li><p><code>KTable</code>–<code>KTable</code> join: a tombstone on either side removes the joined result for that key
+(downstream receives a tombstone).</p></li><li><p>Aggregations on <code>KTable</code> (e.g., <code>groupBy().aggregate()</code>):</p><ul><li>If the update leads to removal (e.g., count drops to zero and you return <code>null</code>), Streams
+deletes the key from the result table’s store and emits a tombstone.</li></ul></li><li><p>Windowed aggregations (<code>TimeWindows</code>, <code>SessionWindows</code>):</p><ul><li>Deletions occur per-window key. Late events, grace periods, and retention govern when
+updates/tombstones appear and how long windowed state persists.</li></ul></li></ul><h3>Internal topics</h3><ul><li>Repartition and changelog topics propagate tombstones so state remains consistent across tasks
+and on restore.</li></ul><h3>Practical tips</h3><ul><li>Topics backing <code>KTable</code>/changelogs should be <strong>compacted</strong>; retention settings determine how long
+tombstones are kept for catch-up consumers.</li><li>Use SerDes that accept <code>null</code>. Most built-ins do; custom SerDes should handle <code>null</code> defensively.</li><li>For “delete-by-key” from Streams: <strong>write a tombstone</strong> to the source topic (e.g., via a producer
+or another stream) rather than trying to mutate the state store directly.</li></ul><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/kafka.md</span></p>
+1759085796792	1686497988937	<p>Explain functions vs function pointers vs lambdas:</p>	<ul><li>Function Items vs Function Pointers: Every function creates a unique, zero-sized,
+compiler-generated type that enables powerful optimizations through static dispatch. Function
+pointers use dynamic dispatch but allow storing different functions in the same variable.</li><li>Closure Capture Modes: Closures are categorized by how they capture variables. <code>FnOnce</code> moves
+captured variables, <code>FnMut</code> mutates them, and <code>Fn</code> only reads them. The compiler chooses the least
+intrusive capture mode possible.</li><li>Trait Hierarchy: The closure traits form a hierarchy through supertraits where Fn extends FnMut,
+which extends FnOnce. This means an Fn closure can be used anywhere FnMut or FnOnce is expected.</li><li>Compiler-Generated Structs: Closures are transformed into anonymous structs that hold captured
+variables and implement the appropriate closure traits.</li><li>Seamless Integration: <strong>Non-capturing</strong> closures can be coerced to function pointers, while function
+pointers implement all closure traits. This creates bidirectional compatibility between functions
+and closures.</li></ul><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/rust/core/datatypes.md</span></p>
+1759136110647	1686497988937	<p>Explain HMAC</p>	<p>HMAC uses two passes of hash computation:</p><ul><li><p>The secret key is first used to derive two keys – inner and outer.</p></li><li><p>The first pass of the algorithm produces an internal hash derived from the message and the inner key.</p></li><li><p>The second pass produces the final HMAC code derived from the inner hash result and the outer key.</p></li><li><p>Someone who intercepts this message won't even be able to guess at its length.</p></li><li><p>The work renders the message contents absolutely useless to anyone without a key or a code.</p></li><li><p>Once the server receives the request and regenerates its own unique HMAC, it compares the two HMACs.
+If they're equal, the client is trusted and the request is executed. This process is often called
+a secret handshake.</p></li><li><p>Since the signature is irreversible and does not expose the secret key, it is safe to share,
+e.g. REST query string</p></li></ul><p>A typical usage of this is uploading and downloading from and to S3. You generate a pre-signed S3
+upload or download URL. This URL will only work to perform the given operation on your behalf
+without making the bucket publicly accessible</p><h2>Algorithm</h2><ul><li>It uses a <strong>hash function</strong> (e.g., SHA-256) together with a <strong>shared secret key</strong> to generate a
+fixed-size tag (MAC).</li><li>The tag is sent along with the message.</li><li>The receiver, who also knows the secret key, recomputes the tag.</li><li>If both tags match, the message is authentic and untampered.</li></ul><h3>Algorithm Steps</h3><p>Let:</p><ul><li><code>H</code> = cryptographic hash function (e.g., SHA-256)</li><li><code>K</code> = secret key (padded to block size of H)</li><li><code>M</code> = message</li><li><code>B</code> = block size of H (64 bytes for SHA-256)</li><li><code>⊕</code> = bitwise XOR</li><li><code>ipad</code> = byte <code>0x36</code> repeated <code>B</code> times</li><li><code>opad</code> = byte <code>0x5c</code> repeated <code>B</code> times</li></ul><ol><li><p>If <code>K</code> is longer than <code>B</code>, hash it to shorten.
+If shorter, pad with zeros to length <code>B</code>.</p></li><li><p>Compute:</p><pre><code>inner = H((K ⊕ ipad) || M)  # concatenation
+outer = H((K ⊕ opad) || inner)</code></pre></li><li><p>Result = <code>outer</code>, which is the HMAC.</p></li></ol><p>Let’s break the <strong>inner part</strong> of the HMAC algorithm down:</p>\[H((K \oplus ipad) \; || \; M)\]<ul><li><code>H</code> = cryptographic hash function (e.g., SHA-256)</li><li><code>K</code> = secret key (padded or hashed to the block size of <code>H</code>)</li><li><code>ipad</code> = <strong>inner padding</strong> (a block of the hash’s block size, each byte = <code>0x36</code>)</li><li><code>⊕</code> = XOR (bitwise exclusive OR)</li><li><code>||</code> = concatenation</li><li><code>M</code> = message</li></ul><ol><li><p><strong>Key preparation</strong>:</p><ul><li>Make sure <code>K</code> is exactly the hash block size (<code>B</code> bytes, 64 for SHA-256).</li><li>If shorter → zero-pad.</li><li>If longer → hash it down.</li></ul></li><li><p><strong>XOR with ipad</strong>:</p><pre><code>Ki = K ⊕ ipad</code></pre><p>This mixes the key with a fixed constant (<code>ipad = 0x36...36</code>) to prevent certain attacks.</p></li><li><p><strong>Concatenate with message</strong>:</p><pre><code>Ki || M</code></pre><p>Append the message to the modified key.</p></li><li><p><strong>Hash the result</strong>:</p><pre><code>inner = H(Ki || M)</code></pre><p>This produces the <strong>inner hash</strong> used in the next step of HMAC.</p></li></ol><h4>Why do this?</h4><p>If you only did <code>H(K || M)</code>, the key and message could interact in insecure ways (length extension
+attacks). The <code>ipad</code>/<code>opad</code> trick forces the hash to start from two <strong>different, unrelated internal
+states</strong>, strengthening security.</p><p>So <code>H((K ⊕ ipad) || M)</code> = <em>the inner hash of HMAC, a secure mix of the padded key, the fixed
+constant, and the message</em>.</p><h3>Security Properties</h3><ul><li><strong>Integrity</strong>: Detects any change in the message.</li><li><strong>Authenticity</strong>: Only parties knowing the secret key can generate a valid tag.</li><li><strong>Resistance</strong>: More secure than just hashing with a key (e.g., <code>H(K || M)</code>) due to structural weaknesses.</li></ul><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/security/hmac.md</span></p>
+1760001711585	1686497988937	<p>Explain Authorization Code Flow with PKCE</p>	<p><img src="pkce-flow.png" alt="pkce-flow" /></p><p>The <strong>PKCE (Proof Key for Code Exchange) OAuth 2.0 flow</strong> is an extension of the <strong>Authorization
+Code flow</strong>, designed to make it secure for <strong>public clients</strong> (e.g., mobile apps, single-page
+apps) that cannot safely store a client secret.</p><ul><li>In the classic Authorization Code flow, a client secret is required when exchanging the<strong>authorization code</strong> for an <strong>access token</strong>.</li><li>Public clients (like mobile or JS apps) can’t keep this secret safe (it would be exposed in the
+app bundle or browser).</li><li>PKCE replaces the client secret with a <strong>one-time code challenge + verifier</strong> mechanism to
+prevent code interception attacks.</li></ul><ol><li><p><strong>Generate a Code Verifier</strong></p><ul><li>A random, high-entropy string (43–128 characters).</li><li>Example: <code>q8nT1_Xx9vwP5fO-L3z7x0U...</code></li></ul></li><li><p><strong>Create a Code Challenge</strong></p><ul><li>Apply SHA256 + Base64URL-encoding to the verifier.</li><li>Example: <code>code_challenge = BASE64URL(SHA256(code_verifier))</code></li></ul></li><li><p><strong>Authorization Request</strong></p><ul><li><p>The client sends the user to the Authorization Server with:</p><ul><li><code>response_type=code</code></li><li><code>client_id</code></li><li><code>redirect_uri</code></li><li><code>code_challenge</code></li><li><code>code_challenge_method=S256</code></li></ul></li><li><p>The user logs in and authorizes.</p></li></ul></li><li><p><strong>Authorization Server Redirect</strong></p><ul><li>After login, the server redirects back with an <strong>authorization code</strong>.</li></ul></li><li><p><strong>Token Request</strong></p><ul><li><p>The client exchanges the code for tokens (access/refresh).</p></li><li><p>Instead of a client secret, it sends:</p><ul><li><code>code</code></li><li><code>redirect_uri</code></li><li><code>code_verifier</code></li></ul></li></ul></li><li><p><strong>Token Response</strong></p><ul><li>The Authorization Server hashes the <code>code_verifier</code>, compares with the original<code>code_challenge</code>, and if valid, issues tokens.</li></ul></li></ol><p>Even if an attacker intercepts the <strong>authorization code</strong>, they cannot redeem it without the
+original <code>code_verifier</code>. Since the verifier never left the client, only the legitimate app can
+complete the flow.</p><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/security/oauth.md</span></p>
+1760338853334	1686497988937	<p>question</p>	<p>answer</p><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/ai/claude-code.md</span></p>
+1760419554790	1686497988937	<p>xxxxx</p>	<p>xxxxx</p><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/help/inka2.md</span></p>
+1760509284607	1686497988937	<p>Explain <code>Borrow</code> vs <code>AsRef</code></p>	<p><strong>AsRef / AsMut vs Borrow / BorrowMut (crisp)</strong></p><ul><li><p><strong>AsRef<t> / AsMut<t></t></t></strong>Purpose: cheap, explicit view conversions.
+API: <code>as_ref(&amp;self) -&gt; &amp;T</code>, <code>as_mut(&amp;mut self) -&gt; &amp;mut T</code>.
+Use when: you just need a <code>&amp;T</code>/<code>&amp;mut T</code> from many “X-like” inputs (e.g., <code>PathBuf→Path</code>, <code>Vec&lt;T&gt;→[T]</code>).
+Guarantees: none beyond producing the (mutable) reference.</p></li><li><p><strong>Borrow<q> / BorrowMut<q></q></q></strong>Purpose: view conversion <strong>with key-equivalence</strong>.
+API: <code>borrow(&amp;self) -&gt; &amp;Q</code>, <code>borrow_mut(&amp;mut self) -&gt; &amp;mut Q</code>.
+Guarantees: <code>Eq</code>, <code>Ord</code>, and <code>Hash</code> of the owner and the borrowed form <strong>must match</strong>.
+Use when: collections/lookup semantics must treat borrowed and owned keys identically.</p></li></ul><p><strong>Why not always <code>Borrow</code>?</strong>It imposes the stronger key-equivalence contract, which you often don’t need and can’t always satisfy. Prefer <code>AsRef/AsMut</code> for general input flexibility; reserve <code>Borrow</code>/<code>BorrowMut</code> for key semantics.</p><p><strong>How lookups use <code>Borrow</code></strong>Collections call <code>borrow()</code> <strong>internally</strong>. Example:</p><pre><code class="language-rust">let mut m: std::collections::HashMap&lt;String, i32&gt; = Default::default();
+m.insert("alice".to_string(), 1);
+assert_eq!(m.get("alice"), Some(&amp;1)); // works because String: Borrow&lt;str&gt;
+
+impl&lt;K, V, S&gt; HashMap&lt;K, V, S&gt; {
+    pub fn get&lt;Q: ?Sized&gt;(&amp;self, k: &amp;Q) -&gt; Option&lt;&amp;V&gt;
+    where
+        K: std::borrow::Borrow&lt;Q&gt;, // &lt;-- key type K must Borrow&lt;Q&gt;
+        Q: std::hash::Hash + Eq,
+    { /* uses K::borrow() internally */ }
+}
+assert_eq!(m.get("alice"), m.get(("alice").borrow())); // same result</code></pre><p><code>HashMap::get</code> accepts <code>&amp;Q</code> and requires <code>K: Borrow&lt;Q&gt;</code>, so it borrows each <code>String</code> key as <code>&amp;str</code>to compare/hash.</p><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/dev/rust/core/traits.md</span></p>
+1709395514436	1686497988937	<p>Should embeddings be normalized for clustering?</p>	<p>normalizing embeddings before clustering is generally recommended, especially when using distance metrics like cosine similarity, which are sensitive to the magnitude of the vectors.
+making the distance between vectors purely a function of the angle is important:</p><ol><li><p><strong>Magnitude Independence</strong>: Normalization removes the influence of the vector's magnitude, focusing the comparison on the direction (or angle) of the vectors. This is particularly useful when the magnitude does not carry meaningful information for the analysis.</p></li><li><p><strong>Improved Clustering Quality</strong>: For algorithms that rely on distance metrics, such as k-means or hierarchical clustering, normalization can lead to more meaningful clusters. It ensures that the clustering process is based on the shape of the data distribution rather than the scale of the data points.</p></li><li><p><strong>Consistency</strong>: Normalizing embeddings ensures consistency across different vectors, making them comparable on the same scale. This is crucial when embeddings come from different sources or when they represent different types of entities.</p></li><li><p><strong>Enhanced Computational Efficiency</strong>: Some clustering algorithms can compute distances more efficiently when vectors are normalized, as certain optimizations can be applied when vectors have a unit norm.</p></li></ol><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/ai/ml.md</span></p>
+1709395514438	1686497988937	<p>How to ensure the kmeans clustering uses cosine distance?</p>	<p>you cannot directly use default KMeans implementation from libraries like scikit-learn, as it is designed to work with Euclidean distances.</p><p><strong>Approximation</strong>:
+Normalize Data Before Clustering: This way, Euclidean distance in the normalized space relates closely to cosine similarity, but it's not the same.
+After normalization, you could use the standard KMeans algorithm, keeping in mind that this approach approximates cosine similarity by minimizing squared Euclidean distance on normalized data.</p><p>FAISS provides Clustering class for clustering vectors. It uses k-means by default. Note that the actual clustering process in FAISS does not directly consider cosine similarity; it's primarily designed for L2 distances. However, by normalizing your vectors and using IndexFlatIP, the clustering will align closely with cosine similarity principles.</p><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/ai/ml.md</span></p>
+1709395515407	1686497988937	<p>What are <code>stop_sequences</code> in LLM parameters?</p>	<ul><li>are specific sequences of characters provided as part of the prompt or API request. They <strong>instruct the language model</strong> to stop generating text when it encounters any of them in its output.</li></ul><pre><code class="language-python"># Claude - Body Syntax
+body = json.dumps({
+    "prompt": prompt_data,
+    "max_tokens_to_sample": 200,
+    "temperature": 0.0,
+    "top_k": 250,
+    "top_p": 0.5,
+    "stop_sequences": ["\n\nHuman:"]
+})</code></pre><ul><li><code>stop_sequences</code> specific sequences of characters where the model should stop generating further text.</li><li>When the model encounters any sequence listed in <code>stop_sequences</code> during its generation process, it treats it as a signal to end the output, effectively stopping the generation.</li><li><code>stop_sequences</code> might include tokens or phrases that signify the end of a user's input or the beginning of the system's response, such as <code>"\n\nHuman:"</code> in your example.</li><li>delineate boundaries of the generated content, preventing the model from generating responses that bleed into subsequent conversational turns or irrelevant content areas.</li></ul><h3><strong>Why Are They Needed?</strong></h3><p>Language models (like Claude, GPT, etc.) are trained to <strong>predict the next most likely token</strong>, without inherent knowledge of:</p><ul><li>When the response should stop.</li><li>Which part of the conversation or prompt they’re continuing.</li></ul><p>Without explicit guidance, the model might:</p><ul><li>Continue generating <strong>multiple conversational turns</strong>, blending both user and assistant messages.</li><li>Produce <strong>excess text</strong> beyond the desired answer (e.g., headers, footers, or extra output).</li></ul><p>For example, if the prompt includes:</p><pre><code>Human: What's the capital of France?
+Assistant:</code></pre><p>the model might have seen many examples where after the assistant’s reply, the transcript continues with another "Human:" marker.
+So, it tries to "complete the transcript" by adding what it thinks comes next, which is the next turn marker.
+Without guidance, it continues generating:</p><pre><code>The capital of France is Paris.
+Human: What's the population?</code></pre><ul><li>its a reflection of <strong>pattern learning</strong>. The model <strong>needs explicit stop instructions</strong> to know when you consider the response complete.</li></ul><p><strong>Boundary Control</strong></p><ul><li>Multi-turn conversations (e.g., chatbots with <code>"Human:"</code>, <code>"Assistant:"</code> markers).</li><li>Templates or structured outputs (e.g., <code>\n### END</code>).</li><li>Running into infinite or excessively long completions.</li></ul><p><strong>Task-Specific Use</strong>Essential for applications needing:</p><ul><li>Controlled text blocks (e.g., summaries, code snippets).</li><li>Specific termination (e.g., <code>"&lt;/html&gt;"</code> for HTML, <code>"END_OF_ANSWER"</code> for completions).</li></ul><h3>Why does it work without on the Chat models:</h3><p>Trained on Turn-Based Dialogue.</p><p>Models like ChatGPT are trained on instruction-following datasets, where:</p><ul><li>Each turn is delimited by system/user roles.</li><li>The model implicitly learns when to stop for most queries (e.g., at the end of a reasonable answer).</li></ul><h3><strong>Best Practices for Choosing Effective <code>stop_sequences</code></strong></h3><ul><li><p>Use a stop sequence that naturally fits your prompt format.</p><ul><li><strong>Example</strong>: If your prompt has <code>"Human: "</code> and <code>"Assistant: "</code>, use <code>"\n\nHuman:"</code> or <code>"\n\nAssistant:"</code> as the stop signal.</li></ul></li><li><p>Pick a sequence unlikely to occur <strong>naturally</strong> in the generated text.</p><ul><li>Avoid common words or phrases (<code>"the"</code>, <code>"and"</code>).</li></ul></li><li><p>If generating structured formats (e.g., JSON, XML, code), choose a sequence that <strong>matches the closing token</strong>:</p><ul><li>JSON: <code>"}"</code>, <code>"]"</code>.</li><li>XML/HTML: <code>"&lt;/html&gt;"</code>, <code>"&lt;/body&gt;"</code>.</li></ul></li><li><p>Ensure the stop sequence isn’t part of valid outputs.</p><ul><li>For code: Avoid <code>";"</code> if generating complex C code with semicolons.</li><li>For emails: Avoid common closing phrases if they're part of the text.</li></ul></li><li><p>Tweak the sequence if the model:</p><ul><li>Stops too early (sequence is too common).</li><li>Misses the stop (sequence is too rare or ambiguous).</li></ul></li><li><p>Short, clear stop sequences (e.g., <code>"\n\nHuman:"</code>) are <strong>faster to detect</strong> and reduce the model's output size.</p></li></ul><table><thead><tr>  <th>Scenario</th>  <th>Example <code>stop_sequences</code></th></tr></thead><tbody><tr>  <td><strong>Chatbot turn boundary</strong></td>  <td><code>"\n\nHuman:"</code>, <code>"\nUser:"</code></td></tr><tr>  <td><strong>Email generation</strong></td>  <td><code>"--END OF EMAIL--"</code>, <code>"\nThanks,"</code></td></tr><tr>  <td><strong>JSON response termination</strong></td>  <td><code>"}"</code>, <code>"]"</code> (for ensuring JSON closure)</td></tr><tr>  <td><strong>Web page generation</strong></td>  <td><code>"&lt;/html&gt;"</code>, <code>"&lt;/body&gt;"</code></td></tr><tr>  <td><strong>Custom task-specific marker</strong></td>  <td><code>"### END"</code>, <code>"&lt;&lt;STOP&gt;&gt;"</code></td></tr><tr>  <td><strong>SQL query generation</strong></td>  <td><code>";"</code> (ensures end of query)</td></tr></tbody></table><p><span style="font-size: 9pt;">File: /Users/Q187392/dev/s/private/vimwiki/help/aws/bedrock.md</span></p>
