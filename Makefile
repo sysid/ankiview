@@ -37,6 +37,15 @@ init-env:  ## init-env
 test:  ## Run all tests (unit, integration, and doc tests) with debug logging
 	pushd $(pkg_src) && RUST_LOG=INFO cargo test --all-features --all-targets -- --test-threads=1  #--nocapture
 
+.PHONY: refresh-test-fixture
+refresh-test-fixture:  ## Refresh test fixture from golden dataset
+	@echo "Refreshing test fixture from golden dataset..."
+	./ankiview/tests/fixtures/copy_golden_dataset.sh
+
+.PHONY: test-verbose
+test-verbose:  ## Run tests with verbose logging
+	pushd $(pkg_src) && RUST_LOG=debug cargo test --all-features --all-targets -- --test-threads=1 --nocapture
+
 ################################################################################
 # Building, Deploying \
 BUILDING:  ## ##################################################################
