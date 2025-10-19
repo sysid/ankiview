@@ -131,4 +131,52 @@ impl NoteRepository for AnkiRepository {
 
         Ok(deleted_card_count)
     }
+
+    #[instrument(level = "debug", skip(self))]
+    fn list_notes(&mut self, search_query: Option<&str>) -> Result<Vec<Note>, DomainError> {
+        // Get note IDs based on search query
+        let note_ids: Vec<NoteId> = match search_query {
+            None => {
+                // No search - get all notes (fastest method)
+                self.collection
+                    .storage
+                    .get_all_note_ids()
+                    .map_err(|e| DomainError::CollectionError(e.to_string()))?
+                    .into_iter()
+                    .collect()
+            }
+            Some(query) => {
+                // Build search query for front field
+                let search_str = if query.is_empty() {
+                    // Empty query string = all notes
+                    "".to_string()
+                } else {
+                    // Search in front field for the query string
+                    format!("front:*{}*", query)
+                };
+
+                // Use unordered search (faster, no sort needed)
+                self.collection
+                    .search_notes_unordered(&search_str)
+                    .map_err(|e| DomainError::CollectionError(e.to_string()))?
+            }
+        };
+
+        // Fetch full note data for each ID
+        let mut notes = Vec::new();
+        for note_id in note_ids {
+            // Use existing get_note logic
+            match self.get_note(note_id.0) {
+                Ok(note) => notes.push(note),
+                Err(DomainError::NoteNotFound(_)) => {
+                    // Skip notes that don't exist (race condition or corrupted DB)
+                    debug!(note_id = note_id.0, "Skipping note that doesn't exist");
+                    continue;
+                }
+                Err(e) => return Err(e), // Propagate other errors
+            }
+        }
+
+        Ok(notes)
+    }
 }

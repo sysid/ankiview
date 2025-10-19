@@ -32,6 +32,7 @@ pub fn run(args: Args) -> Result<()> {
     match args.command {
         Command::View { note_id, json } => handle_view_command(note_id, json, collection_path),
         Command::Delete { note_id } => handle_delete_command(note_id, collection_path),
+        Command::List { search } => handle_list_command(search.as_deref(), collection_path),
     }
 }
 
@@ -88,6 +89,26 @@ fn handle_delete_command(note_id: i64, collection_path: PathBuf) -> Result<()> {
         deleted_cards,
         if deleted_cards == 1 { "" } else { "s" }
     );
+
+    Ok(())
+}
+
+fn handle_list_command(search_query: Option<&str>, collection_path: PathBuf) -> Result<()> {
+    let repository = AnkiRepository::new(&collection_path)?;
+
+    // Initialize application
+    let mut lister = application::NoteLister::new(repository);
+
+    // Execute use case
+    info!(?search_query, "Listing notes");
+    let notes = lister.list_notes(search_query)?;
+    debug!(note_count = notes.len(), "Retrieved notes");
+
+    // Format and print output
+    for note in notes {
+        let first_line = util::text::extract_first_line(&note.front);
+        println!("{}\t{}", note.id, first_line);
+    }
 
     Ok(())
 }

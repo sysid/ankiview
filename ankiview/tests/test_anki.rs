@@ -142,3 +142,48 @@ fn given_repository_when_accessing_media_dir_then_returns_valid_path() -> Result
     assert!(media_dir.ends_with("collection.media"));
     Ok(())
 }
+
+#[test]
+fn given_collection_when_listing_all_notes_then_returns_all_notes() -> Result<()> {
+    // Arrange
+    let test_collection = TestCollection::new()?;
+    let mut repo = test_collection.open_repository()?;
+
+    // Act
+    let notes = repo.list_notes(None)?;
+
+    // Assert
+    assert!(notes.len() >= 10); // Test collection has at least 10 notes
+    assert!(notes.iter().any(|n| n.id == test_notes::TREE));
+    assert!(notes.iter().any(|n| n.id == test_notes::DAG_NOTE));
+    Ok(())
+}
+
+#[test]
+fn given_collection_when_listing_with_search_then_returns_filtered_notes() -> Result<()> {
+    // Arrange
+    let test_collection = TestCollection::new()?;
+    let mut repo = test_collection.open_repository()?;
+
+    // Act
+    let notes = repo.list_notes(Some("Tree"))?;
+
+    // Assert
+    assert!(notes.len() > 0);
+    assert!(notes.iter().any(|n| n.front.contains("Tree")));
+    Ok(())
+}
+
+#[test]
+fn given_collection_when_searching_nonexistent_term_then_returns_empty() -> Result<()> {
+    // Arrange
+    let test_collection = TestCollection::new()?;
+    let mut repo = test_collection.open_repository()?;
+
+    // Act
+    let notes = repo.list_notes(Some("xyznonexistent"))?;
+
+    // Assert
+    assert_eq!(notes.len(), 0);
+    Ok(())
+}

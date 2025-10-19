@@ -191,3 +191,55 @@ fn given_json_flag_with_global_flags_when_parsing_then_succeeds() {
     }
     assert_eq!(parsed.verbose, 1);
 }
+
+#[test]
+fn given_list_command_without_search_when_parsing_then_succeeds() {
+    // Arrange
+    let args = vec!["ankiview", "list"];
+
+    // Act
+    let parsed = Args::try_parse_from(args).unwrap();
+
+    // Assert
+    match parsed.command {
+        Command::List { search } => {
+            assert_eq!(search, None);
+        }
+        _ => panic!("Expected List command"),
+    }
+}
+
+#[test]
+fn given_list_command_with_search_when_parsing_then_succeeds() {
+    // Arrange
+    let args = vec!["ankiview", "list", "tree"];
+
+    // Act
+    let parsed = Args::try_parse_from(args).unwrap();
+
+    // Assert
+    match parsed.command {
+        Command::List { search } => {
+            assert_eq!(search, Some("tree".to_string()));
+        }
+        _ => panic!("Expected List command"),
+    }
+}
+
+#[test]
+fn given_list_command_with_global_flags_when_parsing_then_succeeds() {
+    // Arrange
+    let args = vec!["ankiview", "-v", "list", "graph"];
+
+    // Act
+    let parsed = Args::try_parse_from(args).unwrap();
+
+    // Assert
+    match parsed.command {
+        Command::List { search } => {
+            assert_eq!(search, Some("graph".to_string()));
+        }
+        _ => panic!("Expected List command"),
+    }
+    assert_eq!(parsed.verbose, 1);
+}
