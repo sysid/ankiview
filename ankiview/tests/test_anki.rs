@@ -3,7 +3,7 @@ mod helpers;
 use ankiview::application::NoteRepository;
 use ankiview::domain::DomainError;
 use anyhow::Result;
-use helpers::{TestCollection, test_notes};
+use helpers::{test_notes, TestCollection};
 
 // Existing test (now un-ignored)
 #[test]
@@ -36,8 +36,8 @@ fn given_dag_note_when_getting_note_then_returns_note_with_image() -> Result<()>
     // Assert
     assert_eq!(note.id, test_notes::DAG_NOTE);
     assert!(note.front.contains("DAG"));
-    assert!(note.back.contains("dag.png"));  // Has image reference
-    assert!(!note.model_name.is_empty());  // Has a model name
+    assert!(note.back.contains("dag.png")); // Has image reference
+    assert!(!note.model_name.is_empty()); // Has a model name
     Ok(())
 }
 
@@ -67,8 +67,8 @@ fn given_star_schema_note_when_getting_note_then_returns_html_content() -> Resul
     let note = repo.get_note(test_notes::STAR_SCHEMA)?;
 
     // Assert
-    assert!(note.back.contains("<h3>"));  // Has HTML heading
-    assert!(note.back.contains("star-schema.png"));  // Has image
+    assert!(note.back.contains("<h3>")); // Has HTML heading
+    assert!(note.back.contains("star-schema.png")); // Has image
     assert!(note.back.contains("Fact Table"));
     Ok(())
 }
@@ -140,5 +140,50 @@ fn given_repository_when_accessing_media_dir_then_returns_valid_path() -> Result
     assert!(media_dir.exists());
     assert!(media_dir.is_dir());
     assert!(media_dir.ends_with("collection.media"));
+    Ok(())
+}
+
+#[test]
+fn given_collection_when_listing_all_notes_then_returns_all_notes() -> Result<()> {
+    // Arrange
+    let test_collection = TestCollection::new()?;
+    let mut repo = test_collection.open_repository()?;
+
+    // Act
+    let notes = repo.list_notes(None)?;
+
+    // Assert
+    assert!(notes.len() >= 10); // Test collection has at least 10 notes
+    assert!(notes.iter().any(|n| n.id == test_notes::TREE));
+    assert!(notes.iter().any(|n| n.id == test_notes::DAG_NOTE));
+    Ok(())
+}
+
+#[test]
+fn given_collection_when_listing_with_search_then_returns_filtered_notes() -> Result<()> {
+    // Arrange
+    let test_collection = TestCollection::new()?;
+    let mut repo = test_collection.open_repository()?;
+
+    // Act
+    let notes = repo.list_notes(Some("Tree"))?;
+
+    // Assert
+    assert!(notes.len() > 0);
+    assert!(notes.iter().any(|n| n.front.contains("Tree")));
+    Ok(())
+}
+
+#[test]
+fn given_collection_when_searching_nonexistent_term_then_returns_empty() -> Result<()> {
+    // Arrange
+    let test_collection = TestCollection::new()?;
+    let mut repo = test_collection.open_repository()?;
+
+    // Act
+    let notes = repo.list_notes(Some("xyznonexistent"))?;
+
+    // Assert
+    assert_eq!(notes.len(), 0);
     Ok(())
 }

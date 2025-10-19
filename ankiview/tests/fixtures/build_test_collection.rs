@@ -48,11 +48,15 @@ fn main() -> anyhow::Result<()> {
     println!("     Back: A systems programming language\n");
     println!("   Note 2:");
     println!("     Front: What is the quadratic formula?");
-    println!(r#"     Back: <pre><code class="language-tex">$x = \frac{{-b \pm \sqrt{{b^2 - 4ac}}}}{{2a}}$</code></pre>"#);
+    println!(
+        r#"     Back: <pre><code class="language-tex">$x = \frac{{-b \pm \sqrt{{b^2 - 4ac}}}}{{2a}}$</code></pre>"#
+    );
     println!();
     println!("   Note 3:");
     println!("     Front: How to create a vector in Rust?");
-    println!(r#"     Back: <pre><code class="language-rust">let v: Vec<i32> = vec![1, 2, 3];</code></pre>"#);
+    println!(
+        r#"     Back: <pre><code class="language-rust">let v: Vec<i32> = vec![1, 2, 3];</code></pre>"#
+    );
     println!();
     println!("   Note 4:");
     println!("     Front: Rust logo");
@@ -100,8 +104,8 @@ fn create_test_media(media_dir: &std::path::Path) -> anyhow::Result<()> {
         0x90, 0x77, 0x53, 0xDE, // CRC
         0x00, 0x00, 0x00, 0x0C, // IDAT length
         0x49, 0x44, 0x41, 0x54, // IDAT
-        0x08, 0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00, 0x00, 0x03, 0x01, 0x01, 0x00,
-        0x18, 0xDD, 0x8D, 0xB4, // CRC
+        0x08, 0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00, 0x00, 0x03, 0x01, 0x01, 0x00, 0x18, 0xDD, 0x8D,
+        0xB4, // CRC
         0x00, 0x00, 0x00, 0x00, // IEND length
         0x49, 0x45, 0x4E, 0x44, // IEND
         0xAE, 0x42, 0x60, 0x82, // CRC

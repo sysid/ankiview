@@ -41,6 +41,10 @@ mod tests {
                 Err(DomainError::NoteNotFound(id))
             }
         }
+
+        fn list_notes(&mut self, _search_query: Option<&str>) -> Result<Vec<Note>, DomainError> {
+            unimplemented!("Not needed for deleter tests")
+        }
     }
 
     #[test]

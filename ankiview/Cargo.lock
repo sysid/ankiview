@@ -231,6 +231,7 @@ dependencies = [
  "regex",
  "rstest 0.24.0",
  "serde",
+ "serde_json",
  "tempfile",
  "thiserror 2.0.11",
  "tracing",

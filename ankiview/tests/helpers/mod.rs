@@ -14,8 +14,7 @@ pub struct TestCollection {
 impl TestCollection {
     /// Create a new test collection by copying the fixture
     pub fn new() -> Result<Self> {
-        let temp_dir = tempfile::tempdir()
-            .context("Failed to create temporary directory")?;
+        let temp_dir = tempfile::tempdir().context("Failed to create temporary directory")?;
 
         let fixture_path = Self::fixture_collection_path();
         let collection_path = temp_dir.path().join("collection.anki2");
@@ -29,11 +28,9 @@ impl TestCollection {
         let media_dir = temp_dir.path().join("collection.media");
 
         if fixture_media.exists() {
-            copy_dir_all(&fixture_media, &media_dir)
-                .context("Failed to copy media directory")?;
+            copy_dir_all(&fixture_media, &media_dir).context("Failed to copy media directory")?;
         } else {
-            std::fs::create_dir_all(&media_dir)
-                .context("Failed to create media directory")?;
+            std::fs::create_dir_all(&media_dir).context("Failed to create media directory")?;
         }
 
         Ok(Self {
@@ -76,9 +73,9 @@ fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
 #[allow(dead_code)]
 pub mod test_notes {
     // Notes with images - good for testing media path resolution
-    pub const DAG_NOTE: i64 = 1695797540370;  // Has dag.png image
-    pub const STAR_SCHEMA: i64 = 1713763428669;  // Has star-schema.png image
-    pub const MERCATOR: i64 = 1737647330399;  // Has mercator.png and wsg-enu2.png images
+    pub const DAG_NOTE: i64 = 1695797540370; // Has dag.png image
+    pub const STAR_SCHEMA: i64 = 1713763428669; // Has star-schema.png image
+    pub const MERCATOR: i64 = 1737647330399; // Has mercator.png and wsg-enu2.png images
 
     // Text-heavy notes - good for testing content rendering
     pub const TREE: i64 = 1695797540371;
