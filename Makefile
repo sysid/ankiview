@@ -150,7 +150,7 @@ check-github-token:  ## Check if GITHUB_TOKEN is set
 
 .PHONY: fix-version
 fix-version:  ## fix-version of Cargo.toml, re-connect with HEAD
-	git add bkmr/Cargo.lock
+	git add ankiview/Cargo.lock
 	git commit --amend --no-edit
 	git tag -f "v$(VERSION)"
 	git push --force-with-lease
