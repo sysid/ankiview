@@ -30,33 +30,41 @@ pub fn run(args: Args) -> Result<()> {
 
     // Route to appropriate handler based on command
     match args.command {
-        Command::View { note_id } => handle_view_command(note_id, collection_path),
+        Command::View { note_id, json } => handle_view_command(note_id, json, collection_path),
         Command::Delete { note_id } => handle_delete_command(note_id, collection_path),
     }
 }
 
-fn handle_view_command(note_id: i64, collection_path: PathBuf) -> Result<()> {
+fn handle_view_command(note_id: i64, json: bool, collection_path: PathBuf) -> Result<()> {
     let repository = AnkiRepository::new(&collection_path)?;
     let media_dir = repository.media_dir().to_path_buf();
 
     // Initialize application
     let mut viewer = application::NoteViewer::new(repository);
 
-    // Initialize presentation
-    let presenter = HtmlPresenter::with_media_dir(media_dir);
-    let mut renderer = infrastructure::renderer::ContentRenderer::new();
-
     // Execute use case
     info!(note_id = note_id, "Viewing note");
     let note = viewer.view_note(note_id)?;
     debug!(?note, "Retrieved note");
 
-    let html = presenter.render(&note);
-    debug!(?html, "Generated HTML");
+    // Branch on output format
+    if json {
+        // JSON output path
+        let json_output =
+            serde_json::to_string_pretty(&note).context("Failed to serialize note to JSON")?;
+        println!("{}", json_output);
+    } else {
+        // Browser output path (existing behavior)
+        let presenter = HtmlPresenter::with_media_dir(media_dir);
+        let mut renderer = infrastructure::renderer::ContentRenderer::new();
 
-    // Create temporary file and open in browser
-    let temp_path = renderer.create_temp_file(&html)?;
-    renderer.open_in_browser(&temp_path)?;
+        let html = presenter.render(&note);
+        debug!(?html, "Generated HTML");
+
+        // Create temporary file and open in browser
+        let temp_path = renderer.create_temp_file(&html)?;
+        renderer.open_in_browser(&temp_path)?;
+    }
 
     Ok(())
 }

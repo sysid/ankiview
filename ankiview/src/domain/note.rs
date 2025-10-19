@@ -1,5 +1,7 @@
 // src/domain/note.rs
-#[derive(Debug, Clone)]
+use serde::Serialize;
+
+#[derive(Debug, Clone, Serialize)]
 pub struct Note {
     pub id: i64,
     pub front: String,

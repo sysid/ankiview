@@ -30,6 +30,10 @@ pub enum Command {
         /// Note ID to view
         #[arg(value_name = "NOTE_ID")]
         note_id: i64,
+
+        /// Output note as JSON instead of opening in browser
+        #[arg(long)]
+        json: bool,
     },
 
     /// Delete a note from the collection

@@ -21,8 +21,9 @@ fn given_explicit_view_command_when_parsing_then_succeeds() {
 
     // Assert
     match parsed.command {
-        Command::View { note_id } => {
+        Command::View { note_id, json } => {
             assert_eq!(note_id, 1234567890);
+            assert_eq!(json, false);
         }
         _ => panic!("Expected View command"),
     }
@@ -87,8 +88,9 @@ fn given_global_profile_flag_when_parsing_then_succeeds() {
 
     // Assert
     match parsed.command {
-        Command::View { note_id } => {
+        Command::View { note_id, json } => {
             assert_eq!(note_id, 1234567890);
+            assert_eq!(json, false);
         }
         _ => panic!("Expected View command"),
     }
@@ -133,4 +135,59 @@ fn given_collection_flag_after_subcommand_when_parsing_then_succeeds() {
         parsed.collection,
         Some(std::path::PathBuf::from("/path/to/collection.anki2"))
     );
+}
+
+#[test]
+fn given_json_flag_when_parsing_view_command_then_json_is_true() {
+    // Arrange
+    let args = vec!["ankiview", "view", "--json", "1234567890"];
+
+    // Act
+    let parsed = Args::try_parse_from(args).unwrap();
+
+    // Assert
+    match parsed.command {
+        Command::View { note_id, json } => {
+            assert_eq!(note_id, 1234567890);
+            assert_eq!(json, true);
+        }
+        _ => panic!("Expected View command"),
+    }
+}
+
+#[test]
+fn given_no_json_flag_when_parsing_view_command_then_json_is_false() {
+    // Arrange
+    let args = vec!["ankiview", "view", "1234567890"];
+
+    // Act
+    let parsed = Args::try_parse_from(args).unwrap();
+
+    // Assert
+    match parsed.command {
+        Command::View { note_id, json } => {
+            assert_eq!(note_id, 1234567890);
+            assert_eq!(json, false);
+        }
+        _ => panic!("Expected View command"),
+    }
+}
+
+#[test]
+fn given_json_flag_with_global_flags_when_parsing_then_succeeds() {
+    // Arrange
+    let args = vec!["ankiview", "-v", "view", "--json", "1234567890"];
+
+    // Act
+    let parsed = Args::try_parse_from(args).unwrap();
+
+    // Assert
+    match parsed.command {
+        Command::View { note_id, json } => {
+            assert_eq!(note_id, 1234567890);
+            assert_eq!(json, true);
+        }
+        _ => panic!("Expected View command"),
+    }
+    assert_eq!(parsed.verbose, 1);
 }

@@ -3,7 +3,7 @@ mod helpers;
 use ankiview::application::NoteRepository;
 use ankiview::ports::HtmlPresenter;
 use anyhow::Result;
-use helpers::{TestCollection, test_notes};
+use helpers::{test_notes, TestCollection};
 
 #[test]
 fn given_dag_note_when_rendering_with_media_dir_then_converts_to_file_uri() -> Result<()> {
@@ -39,9 +39,9 @@ fn given_star_schema_note_when_rendering_then_processes_html_content() -> Result
     let html = presenter.render(&note);
 
     // Assert
-    assert!(html.contains("file://"));  // Image converted to file URI
+    assert!(html.contains("file://")); // Image converted to file URI
     assert!(html.contains("star-schema.png"));
-    assert!(html.contains("<h3>"));  // HTML structure preserved
+    assert!(html.contains("<h3>")); // HTML structure preserved
     assert!(html.contains("Fact Table"));
     Ok(())
 }

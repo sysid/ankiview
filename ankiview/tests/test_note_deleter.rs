@@ -3,7 +3,7 @@ mod helpers;
 use ankiview::application::{NoteDeleter, NoteRepository};
 use ankiview::domain::DomainError;
 use anyhow::Result;
-use helpers::{TestCollection, test_notes};
+use helpers::{test_notes, TestCollection};
 
 #[test]
 fn given_existing_note_when_deleting_then_removes_note_and_cards() -> Result<()> {

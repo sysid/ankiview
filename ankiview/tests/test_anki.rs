@@ -3,7 +3,7 @@ mod helpers;
 use ankiview::application::NoteRepository;
 use ankiview::domain::DomainError;
 use anyhow::Result;
-use helpers::{TestCollection, test_notes};
+use helpers::{test_notes, TestCollection};
 
 // Existing test (now un-ignored)
 #[test]
@@ -36,8 +36,8 @@ fn given_dag_note_when_getting_note_then_returns_note_with_image() -> Result<()>
     // Assert
     assert_eq!(note.id, test_notes::DAG_NOTE);
     assert!(note.front.contains("DAG"));
-    assert!(note.back.contains("dag.png"));  // Has image reference
-    assert!(!note.model_name.is_empty());  // Has a model name
+    assert!(note.back.contains("dag.png")); // Has image reference
+    assert!(!note.model_name.is_empty()); // Has a model name
     Ok(())
 }
 
@@ -67,8 +67,8 @@ fn given_star_schema_note_when_getting_note_then_returns_html_content() -> Resul
     let note = repo.get_note(test_notes::STAR_SCHEMA)?;
 
     // Assert
-    assert!(note.back.contains("<h3>"));  // Has HTML heading
-    assert!(note.back.contains("star-schema.png"));  // Has image
+    assert!(note.back.contains("<h3>")); // Has HTML heading
+    assert!(note.back.contains("star-schema.png")); // Has image
     assert!(note.back.contains("Fact Table"));
     Ok(())
 }
