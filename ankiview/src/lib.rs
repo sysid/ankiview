@@ -5,6 +5,7 @@ pub mod domain;
 pub mod infrastructure;
 pub mod ports;
 pub mod util;
+pub mod inka;
 
 use crate::cli::args::{Args, Command};
 use anyhow::{Context, Result};
