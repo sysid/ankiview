@@ -1,1 +1,1 @@
-// Domain module placeholder
+pub mod card;
