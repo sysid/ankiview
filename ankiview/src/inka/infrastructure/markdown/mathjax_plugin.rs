@@ -107,8 +107,8 @@ impl BlockRule for BlockMathScanner {
             let content = content_lines.join("\n");
 
             let node = Node::new(BlockMath { content });
-            let next_line = end + 1;
-            return Some((node, next_line));
+            // Return the closing $$ line - the parser will advance past it
+            return Some((node, end));
         }
 
         None

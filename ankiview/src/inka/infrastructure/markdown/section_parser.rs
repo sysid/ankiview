@@ -31,10 +31,10 @@ impl Default for SectionParser {
 }
 
 lazy_static! {
-    static ref DECK_REGEX: Regex = Regex::new(r"(?m)^Deck:\s*(.+?)$")
+    static ref DECK_REGEX: Regex = Regex::new(r"(?m)^Deck:[ \t]*(.+?)$")
         .expect("Failed to compile deck regex");
 
-    static ref TAGS_REGEX: Regex = Regex::new(r"(?m)^Tags:\s*(.+?)$")
+    static ref TAGS_REGEX: Regex = Regex::new(r"(?m)^Tags:[ \t]*(.+?)$")
         .expect("Failed to compile tags regex");
 
     static ref NOTE_START_REGEX: Regex = Regex::new(r"(?m)^(?:<!--ID:\S+-->\n)?^\d+\.")
@@ -207,6 +207,8 @@ Deck: Second
     fn given_section_with_empty_tags_when_extracting_then_returns_empty() {
         let section = "Tags:   \n1. Q";
         let tags = extract_tags(section);
+
+        println!("Tags result: {:?}", tags);
 
         assert_eq!(tags, Vec::<String>::new());
     }
