@@ -65,6 +65,59 @@ impl AnkiRepository {
     pub fn media_dir(&self) -> &Path {
         &self.media_dir
     }
+
+    /// Find or create a Basic note type with front/back fields
+    /// Returns the notetype ID
+    pub fn find_or_create_basic_notetype(&mut self) -> Result<i64> {
+        use anki::notetype::NotetypeKind;
+
+        // Look for existing Basic notetype
+        let all_notetypes = self
+            .collection
+            .get_all_notetypes()
+            .context("Failed to get all notetypes")?;
+
+        // Find a Basic-type notetype (non-cloze)
+        for notetype in all_notetypes {
+            if notetype.config.kind() != NotetypeKind::Cloze && notetype.fields.len() >= 2 {
+                // Found a suitable basic notetype
+                debug!(notetype_id = notetype.id.0, name = %notetype.name, "Found existing Basic notetype");
+                return Ok(notetype.id.0);
+            }
+        }
+
+        // No suitable notetype found - this shouldn't happen in normal Anki collections
+        // For now, return an error. In the future, we could create one programmatically.
+        Err(anyhow::anyhow!(
+            "No Basic notetype found. Please create a Basic notetype in Anki first."
+        ))
+    }
+
+    /// Find or create a Cloze note type
+    /// Returns the notetype ID
+    pub fn find_or_create_cloze_notetype(&mut self) -> Result<i64> {
+        use anki::notetype::NotetypeKind;
+
+        // Look for existing Cloze notetype
+        let all_notetypes = self
+            .collection
+            .get_all_notetypes()
+            .context("Failed to get all notetypes")?;
+
+        // Find a Cloze-type notetype
+        for notetype in all_notetypes {
+            if notetype.config.kind() == NotetypeKind::Cloze {
+                // Found a cloze notetype
+                debug!(notetype_id = notetype.id.0, name = %notetype.name, "Found existing Cloze notetype");
+                return Ok(notetype.id.0);
+            }
+        }
+
+        // No cloze notetype found - this shouldn't happen in normal Anki collections
+        Err(anyhow::anyhow!(
+            "No Cloze notetype found. Please create a Cloze notetype in Anki first."
+        ))
+    }
 }
 
 impl NoteRepository for AnkiRepository {
@@ -178,5 +231,64 @@ impl NoteRepository for AnkiRepository {
         }
 
         Ok(notes)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    // Helper to create a temporary test collection
+    fn create_test_collection() -> Result<(TempDir, AnkiRepository)> {
+        let temp_dir = TempDir::new()?;
+        let collection_path = temp_dir.path().join("collection.anki2");
+
+        // Create a new Anki collection
+        let collection = CollectionBuilder::new(&collection_path).build()?;
+        drop(collection); // Close it
+
+        // Open it with our repository
+        let repo = AnkiRepository::new(&collection_path)?;
+
+        Ok((temp_dir, repo))
+    }
+
+    #[test]
+    fn given_new_collection_when_finding_basic_notetype_then_creates_and_returns_id() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+
+        let notetype_id = repo.find_or_create_basic_notetype().unwrap();
+
+        assert!(notetype_id > 0);
+    }
+
+    #[test]
+    fn given_existing_basic_notetype_when_finding_then_returns_same_id() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+
+        let first_id = repo.find_or_create_basic_notetype().unwrap();
+        let second_id = repo.find_or_create_basic_notetype().unwrap();
+
+        assert_eq!(first_id, second_id);
+    }
+
+    #[test]
+    fn given_new_collection_when_finding_cloze_notetype_then_creates_and_returns_id() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+
+        let notetype_id = repo.find_or_create_cloze_notetype().unwrap();
+
+        assert!(notetype_id > 0);
+    }
+
+    #[test]
+    fn given_existing_cloze_notetype_when_finding_then_returns_same_id() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+
+        let first_id = repo.find_or_create_cloze_notetype().unwrap();
+        let second_id = repo.find_or_create_cloze_notetype().unwrap();
+
+        assert_eq!(first_id, second_id);
     }
 }
