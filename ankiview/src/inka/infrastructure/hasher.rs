@@ -1,6 +1,8 @@
 use anyhow::{Context, Result};
 use sha2::{Sha256, Digest};
 use std::path::Path;
+use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
 
 /// Calculate SHA256 hash of a file's content
 pub fn calculate_file_hash(path: impl AsRef<Path>) -> Result<String> {
@@ -19,6 +21,78 @@ pub fn calculate_file_hash(path: impl AsRef<Path>) -> Result<String> {
 pub fn has_file_changed(path: impl AsRef<Path>, previous_hash: &str) -> Result<bool> {
     let current_hash = calculate_file_hash(path)?;
     Ok(current_hash != previous_hash)
+}
+
+/// Hash cache for tracking file changes
+/// Stores filepath -> hash mapping in a JSON file
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HashCache {
+    cache_path: std::path::PathBuf,
+    hashes: HashMap<String, String>,
+}
+
+impl HashCache {
+    /// Load hash cache from file, or create empty cache if file doesn't exist
+    pub fn load(path: impl AsRef<Path>) -> Result<Self> {
+        let cache_path = path.as_ref().to_path_buf();
+
+        let hashes = if cache_path.exists() {
+            let content = std::fs::read_to_string(&cache_path)
+                .context("Failed to read hash cache file")?;
+            serde_json::from_str(&content)
+                .context("Failed to parse hash cache JSON")?
+        } else {
+            HashMap::new()
+        };
+
+        Ok(Self { cache_path, hashes })
+    }
+
+    /// Save hash cache to file
+    pub fn save(&self) -> Result<()> {
+        let json = serde_json::to_string_pretty(&self.hashes)
+            .context("Failed to serialize hash cache")?;
+
+        std::fs::write(&self.cache_path, json)
+            .context("Failed to write hash cache file")?;
+
+        Ok(())
+    }
+
+    /// Check if file has changed compared to cached hash
+    /// Returns true if file is new or content has changed
+    pub fn file_has_changed(&self, filepath: impl AsRef<Path>) -> Result<bool> {
+        let path_str = filepath.as_ref()
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("Invalid file path"))?
+            .to_string();
+
+        // If not in cache, it's a new file (changed)
+        let Some(cached_hash) = self.hashes.get(&path_str) else {
+            return Ok(true);
+        };
+
+        // Compare current hash with cached hash
+        has_file_changed(filepath, cached_hash)
+    }
+
+    /// Update hash for a file in the cache
+    pub fn update_hash(&mut self, filepath: impl AsRef<Path>) -> Result<()> {
+        let path_str = filepath.as_ref()
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("Invalid file path"))?
+            .to_string();
+
+        let hash = calculate_file_hash(filepath)?;
+        self.hashes.insert(path_str, hash);
+
+        Ok(())
+    }
+
+    /// Clear all hashes from cache
+    pub fn clear(&mut self) {
+        self.hashes.clear();
+    }
 }
 
 #[cfg(test)]
@@ -131,5 +205,117 @@ mod tests {
         // Should detect change
         let changed = has_file_changed(&file_path, &original_hash).unwrap();
         assert!(changed);
+    }
+
+    // HashCache tests
+    #[test]
+    fn given_nonexistent_cache_when_loading_then_creates_empty() {
+        let temp_dir = TempDir::new().unwrap();
+        let cache_path = temp_dir.path().join("hashes.json");
+
+        let cache = HashCache::load(&cache_path).unwrap();
+
+        assert_eq!(cache.hashes.len(), 0);
+    }
+
+    #[test]
+    fn given_cache_when_saving_then_creates_json_file() {
+        let temp_dir = TempDir::new().unwrap();
+        let cache_path = temp_dir.path().join("cache.json");
+
+        let cache = HashCache::load(&cache_path).unwrap();
+        cache.save().unwrap();
+
+        assert!(cache_path.exists());
+        let content = fs::read_to_string(&cache_path).unwrap();
+        assert!(content.contains("{") && content.contains("}"));
+    }
+
+    #[test]
+    fn given_new_file_when_checking_then_returns_changed() {
+        let temp_dir = TempDir::new().unwrap();
+        let cache_path = temp_dir.path().join("cache.json");
+        let file_path = temp_dir.path().join("test.md");
+        fs::write(&file_path, "Content").unwrap();
+
+        let cache = HashCache::load(&cache_path).unwrap();
+        let changed = cache.file_has_changed(&file_path).unwrap();
+
+        assert!(changed);
+    }
+
+    #[test]
+    fn given_unchanged_file_when_checking_then_returns_false() {
+        let temp_dir = TempDir::new().unwrap();
+        let cache_path = temp_dir.path().join("cache.json");
+        let file_path = temp_dir.path().join("unchanged.md");
+        fs::write(&file_path, "Stable content").unwrap();
+
+        let mut cache = HashCache::load(&cache_path).unwrap();
+        cache.update_hash(&file_path).unwrap();
+        cache.save().unwrap();
+
+        // Reload cache and check same file
+        let cache = HashCache::load(&cache_path).unwrap();
+        let changed = cache.file_has_changed(&file_path).unwrap();
+
+        assert!(!changed);
+    }
+
+    #[test]
+    fn given_modified_file_when_checking_then_returns_changed() {
+        let temp_dir = TempDir::new().unwrap();
+        let cache_path = temp_dir.path().join("cache.json");
+        let file_path = temp_dir.path().join("modified.md");
+        fs::write(&file_path, "Original").unwrap();
+
+        let mut cache = HashCache::load(&cache_path).unwrap();
+        cache.update_hash(&file_path).unwrap();
+        cache.save().unwrap();
+
+        // Modify file
+        fs::write(&file_path, "Modified").unwrap();
+
+        // Reload and check
+        let cache = HashCache::load(&cache_path).unwrap();
+        let changed = cache.file_has_changed(&file_path).unwrap();
+
+        assert!(changed);
+    }
+
+    #[test]
+    fn given_cache_with_hashes_when_clearing_then_removes_all() {
+        let temp_dir = TempDir::new().unwrap();
+        let cache_path = temp_dir.path().join("cache.json");
+        let file_path = temp_dir.path().join("file.md");
+        fs::write(&file_path, "Content").unwrap();
+
+        let mut cache = HashCache::load(&cache_path).unwrap();
+        cache.update_hash(&file_path).unwrap();
+        assert_eq!(cache.hashes.len(), 1);
+
+        cache.clear();
+        assert_eq!(cache.hashes.len(), 0);
+    }
+
+    #[test]
+    fn given_multiple_files_when_updating_then_tracks_all() {
+        let temp_dir = TempDir::new().unwrap();
+        let cache_path = temp_dir.path().join("cache.json");
+        let file1 = temp_dir.path().join("file1.md");
+        let file2 = temp_dir.path().join("file2.md");
+        fs::write(&file1, "Content 1").unwrap();
+        fs::write(&file2, "Content 2").unwrap();
+
+        let mut cache = HashCache::load(&cache_path).unwrap();
+        cache.update_hash(&file1).unwrap();
+        cache.update_hash(&file2).unwrap();
+        cache.save().unwrap();
+
+        // Reload and verify both tracked
+        let cache = HashCache::load(&cache_path).unwrap();
+        assert_eq!(cache.hashes.len(), 2);
+        assert!(!cache.file_has_changed(&file1).unwrap());
+        assert!(!cache.file_has_changed(&file2).unwrap());
     }
 }
