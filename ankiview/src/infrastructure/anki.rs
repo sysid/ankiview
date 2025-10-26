@@ -118,6 +118,101 @@ impl AnkiRepository {
             "No Cloze notetype found. Please create a Cloze notetype in Anki first."
         ))
     }
+
+    /// Create a new Basic note in the collection
+    /// Returns the created note ID
+    pub fn create_basic_note(
+        &mut self,
+        front: &str,
+        back: &str,
+        deck_name: &str,
+        tags: &[String],
+    ) -> Result<i64> {
+        use anki::notes::Note;
+        use anki::notetype::NotetypeId;
+
+        // Find or create the Basic notetype
+        let notetype_id = self.find_or_create_basic_notetype()?;
+
+        // Get the notetype to create the note
+        let notetype = self
+            .collection
+            .get_notetype(NotetypeId(notetype_id))
+            .context("Failed to get notetype")?
+            .context("Notetype not found")?;
+
+        // Find or create the deck
+        let deck_id = self
+            .collection
+            .get_or_create_normal_deck(deck_name)
+            .context("Failed to get or create deck")?
+            .id;
+
+        // Create a new note
+        let mut note = Note::new(&notetype);
+        note.set_field(0, front)
+            .context("Failed to set front field")?;
+        note.set_field(1, back).context("Failed to set back field")?;
+
+        // Add tags
+        for tag in tags {
+            note.tags.push(tag.clone());
+        }
+
+        // Add the note to the collection
+        self.collection
+            .add_note(&mut note, deck_id)
+            .context("Failed to add note to collection")?;
+
+        debug!(note_id = note.id.0, "Created Basic note");
+        Ok(note.id.0)
+    }
+
+    /// Create a new Cloze note in the collection
+    /// Returns the created note ID
+    pub fn create_cloze_note(
+        &mut self,
+        text: &str,
+        deck_name: &str,
+        tags: &[String],
+    ) -> Result<i64> {
+        use anki::notes::Note;
+        use anki::notetype::NotetypeId;
+
+        // Find or create the Cloze notetype
+        let notetype_id = self.find_or_create_cloze_notetype()?;
+
+        // Get the notetype to create the note
+        let notetype = self
+            .collection
+            .get_notetype(NotetypeId(notetype_id))
+            .context("Failed to get notetype")?
+            .context("Notetype not found")?;
+
+        // Find or create the deck
+        let deck_id = self
+            .collection
+            .get_or_create_normal_deck(deck_name)
+            .context("Failed to get or create deck")?
+            .id;
+
+        // Create a new note
+        let mut note = Note::new(&notetype);
+        note.set_field(0, text).context("Failed to set text field")?;
+
+        // Add tags
+        for tag in tags {
+            note.tags.push(tag.clone());
+        }
+
+        // Add the note to the collection
+        self.collection
+            .add_note(&mut note, deck_id)
+            .context("Failed to add note to collection")?;
+
+        debug!(note_id = note.id.0, "Created Cloze note");
+        Ok(note.id.0)
+    }
 }
 
 impl NoteRepository for AnkiRepository {
@@ -290,5 +385,66 @@ mod tests {
         let second_id = repo.find_or_create_cloze_notetype().unwrap();
 
         assert_eq!(first_id, second_id);
+    }
+
+    #[test]
+    fn given_basic_card_fields_when_creating_note_then_returns_note_id() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+
+        let note_id = repo
+            .create_basic_note(
+                "What is Rust?",
+                "A systems programming language",
+                "Default",
+                &vec!["rust".to_string(), "programming".to_string()],
+            )
+            .unwrap();
+
+        assert!(note_id > 0);
+    }
+
+    #[test]
+    fn given_basic_note_when_created_then_can_retrieve() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+
+        let note_id = repo
+            .create_basic_note("Front", "Back", "Default", &vec![])
+            .unwrap();
+
+        // Should be able to retrieve the note
+        let note = repo.get_note(note_id).unwrap();
+        assert_eq!(note.id, note_id);
+        assert!(note.front.contains("Front"));
+        assert!(note.back.contains("Back"));
+    }
+
+    #[test]
+    fn given_cloze_text_when_creating_note_then_returns_note_id() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+
+        let note_id = repo
+            .create_cloze_note(
+                "The capital of {{c1::France}} is {{c2::Paris}}",
+                "Default",
+                &vec!["geography".to_string()],
+            )
+            .unwrap();
+
+        assert!(note_id > 0);
+    }
+
+    #[test]
+    fn given_cloze_note_when_created_then_can_retrieve() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+
+        let cloze_text = "Answer: {{c1::42}}";
+        let note_id = repo
+            .create_cloze_note(cloze_text, "Default", &vec![])
+            .unwrap();
+
+        // Should be able to retrieve the note
+        let note = repo.get_note(note_id).unwrap();
+        assert_eq!(note.id, note_id);
+        assert!(note.front.contains("42"));
     }
 }
