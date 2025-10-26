@@ -31,7 +31,14 @@ ADMIN::  ## ##################################################################
 .PHONY: init-env
 init-env:  ## init-env
 	@rm -fr ~/xxx/*
-	@mkdir -p ~/xxx
+	@mkdir -p ~/xxx/ankiview-test
+	@cp -r ankiview/tests/fixtures/test_collection/* ~/xxx/ankiview-test/
+
+
+.PHONY: create-note
+create-note:  ## create a note from markdown
+	cargo run --bin ankiview -- -c ~/xxx/ankiview-test/collection.anki2 view 1695797540371
+	cargo run --bin ankiview -- -c ~/xxx/ankiview-test/collection.anki2 collect test.md
 
 .PHONY: test
 test:  ## Run all tests (unit, integration, and doc tests) with debug logging

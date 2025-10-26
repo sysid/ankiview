@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use std::path::Path;
 
 /// TOML configuration for inka collection
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Default)]
 pub struct Config {
     #[serde(default)]
     pub defaults: Defaults,
@@ -84,16 +84,6 @@ impl Default for HighlightConfig {
     fn default() -> Self {
         Self {
             style: default_highlight_style(),
-        }
-    }
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            defaults: Defaults::default(),
-            anki: AnkiConfig::default(),
-            highlight: HighlightConfig::default(),
         }
     }
 }

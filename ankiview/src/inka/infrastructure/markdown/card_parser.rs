@@ -88,8 +88,8 @@ fn clean_answer(answer_raw: &str) -> String {
                 } else {
                     without_prefix
                 }
-            } else if line.starts_with('>') {
-                &line[1..]
+            } else if let Some(stripped) = line.strip_prefix('>') {
+                stripped
             } else {
                 line
             }

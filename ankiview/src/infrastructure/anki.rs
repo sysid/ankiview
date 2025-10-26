@@ -439,7 +439,7 @@ mod tests {
                 "What is Rust?",
                 "A systems programming language",
                 "Default",
-                &vec!["rust".to_string(), "programming".to_string()],
+                &["rust".to_string(), "programming".to_string()],
             )
             .unwrap();
 
@@ -451,7 +451,7 @@ mod tests {
         let (_temp_dir, mut repo) = create_test_collection().unwrap();
 
         let note_id = repo
-            .create_basic_note("Front", "Back", "Default", &vec![])
+            .create_basic_note("Front", "Back", "Default", &[])
             .unwrap();
 
         // Should be able to retrieve the note
@@ -469,7 +469,7 @@ mod tests {
             .create_cloze_note(
                 "The capital of {{c1::France}} is {{c2::Paris}}",
                 "Default",
-                &vec!["geography".to_string()],
+                &["geography".to_string()],
             )
             .unwrap();
 
@@ -482,7 +482,7 @@ mod tests {
 
         let cloze_text = "Answer: {{c1::42}}";
         let note_id = repo
-            .create_cloze_note(cloze_text, "Default", &vec![])
+            .create_cloze_note(cloze_text, "Default", &[])
             .unwrap();
 
         // Should be able to retrieve the note
@@ -497,7 +497,7 @@ mod tests {
 
         // Create a note
         let note_id = repo
-            .create_basic_note("Original Front", "Original Back", "Default", &vec![])
+            .create_basic_note("Original Front", "Original Back", "Default", &[])
             .unwrap();
 
         // Update it
@@ -514,7 +514,7 @@ mod tests {
     fn given_nonexistent_note_when_updating_then_returns_error() {
         let (_temp_dir, mut repo) = create_test_collection().unwrap();
 
-        let result = repo.update_note(9999999, &vec!["Test".to_string()]);
+        let result = repo.update_note(9999999, &["Test".to_string()]);
 
         assert!(result.is_err());
     }
@@ -524,7 +524,7 @@ mod tests {
         let (_temp_dir, mut repo) = create_test_collection().unwrap();
 
         let note_id = repo
-            .create_basic_note("Front", "Back", "Default", &vec![])
+            .create_basic_note("Front", "Back", "Default", &[])
             .unwrap();
 
         assert!(repo.note_exists(note_id).unwrap());

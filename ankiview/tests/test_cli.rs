@@ -23,7 +23,7 @@ fn given_explicit_view_command_when_parsing_then_succeeds() {
     match parsed.command {
         Command::View { note_id, json } => {
             assert_eq!(note_id, 1234567890);
-            assert_eq!(json, false);
+            assert!(!json);
         }
         _ => panic!("Expected View command"),
     }
@@ -90,7 +90,7 @@ fn given_global_profile_flag_when_parsing_then_succeeds() {
     match parsed.command {
         Command::View { note_id, json } => {
             assert_eq!(note_id, 1234567890);
-            assert_eq!(json, false);
+            assert!(!json);
         }
         _ => panic!("Expected View command"),
     }
@@ -149,7 +149,7 @@ fn given_json_flag_when_parsing_view_command_then_json_is_true() {
     match parsed.command {
         Command::View { note_id, json } => {
             assert_eq!(note_id, 1234567890);
-            assert_eq!(json, true);
+            assert!(json);
         }
         _ => panic!("Expected View command"),
     }
@@ -167,7 +167,7 @@ fn given_no_json_flag_when_parsing_view_command_then_json_is_false() {
     match parsed.command {
         Command::View { note_id, json } => {
             assert_eq!(note_id, 1234567890);
-            assert_eq!(json, false);
+            assert!(!json);
         }
         _ => panic!("Expected View command"),
     }
@@ -185,7 +185,7 @@ fn given_json_flag_with_global_flags_when_parsing_then_succeeds() {
     match parsed.command {
         Command::View { note_id, json } => {
             assert_eq!(note_id, 1234567890);
-            assert_eq!(json, true);
+            assert!(json);
         }
         _ => panic!("Expected View command"),
     }

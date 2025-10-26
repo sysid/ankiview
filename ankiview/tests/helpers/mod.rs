@@ -47,6 +47,7 @@ impl TestCollection {
     }
 
     /// Open repository for this test collection
+    #[allow(dead_code)]
     pub fn open_repository(&self) -> Result<AnkiRepository> {
         AnkiRepository::new(&self.collection_path)
     }

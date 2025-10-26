@@ -1,6 +1,5 @@
 mod helpers;
 
-use ankiview::application::NoteRepository;
 use anyhow::Result;
 use helpers::TestCollection;
 use std::fs;

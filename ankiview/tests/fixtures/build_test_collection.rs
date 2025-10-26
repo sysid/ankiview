@@ -112,12 +112,12 @@ fn create_test_media(media_dir: &std::path::Path) -> anyhow::Result<()> {
     ];
 
     let rust_logo_path = media_dir.join("rust-logo.png");
-    std::fs::write(&rust_logo_path, &rust_logo_png)?;
+    std::fs::write(&rust_logo_path, rust_logo_png)?;
     println!("Created test image: {:?}", rust_logo_path);
 
     // Create another simple PNG (sample.jpg - actually a PNG despite the name)
     let sample_path = media_dir.join("sample.jpg");
-    std::fs::write(&sample_path, &rust_logo_png)?;
+    std::fs::write(&sample_path, rust_logo_png)?;
     println!("Created test image: {:?}", sample_path);
 
     Ok(())

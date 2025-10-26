@@ -8,8 +8,8 @@ use crate::inka::infrastructure::file_writer;
 
 /// Main use case for collecting markdown cards into Anki
 pub struct CardCollector {
-    collection_path: PathBuf,
-    media_dir: PathBuf,
+    _collection_path: PathBuf,
+    _media_dir: PathBuf,
     repository: AnkiRepository,
 }
 
@@ -34,8 +34,8 @@ impl CardCollector {
         let repository = AnkiRepository::new(&collection_path)?;
 
         Ok(Self {
-            collection_path,
-            media_dir,
+            _collection_path: collection_path,
+            _media_dir: media_dir,
             repository,
         })
     }
@@ -84,10 +84,9 @@ impl CardCollector {
                     let back_html = converter::markdown_to_html(&back_md);
 
                     // Create or update note
-                    let note_id = if let Some(id) = existing_id {
+                    if let Some(id) = existing_id {
                         // Update existing note
                         self.repository.update_note(id, &[front_html, back_html])?;
-                        id
                     } else {
                         // Create new note
                         let id = self.repository.create_basic_note(
@@ -99,7 +98,6 @@ impl CardCollector {
 
                         // Inject ID back into markdown
                         content = file_writer::inject_anki_id(&content, &note_str, id);
-                        id
                     };
 
                     card_count += 1;
@@ -115,10 +113,9 @@ impl CardCollector {
                     let text_html = converter::markdown_to_html(&text_transformed);
 
                     // Create or update note
-                    let note_id = if let Some(id) = existing_id {
+                    if let Some(id) = existing_id {
                         // Update existing note
                         self.repository.update_note(id, &[text_html])?;
-                        id
                     } else {
                         // Create new note
                         let id = self.repository.create_cloze_note(
@@ -129,7 +126,6 @@ impl CardCollector {
 
                         // Inject ID back into markdown
                         content = file_writer::inject_anki_id(&content, &note_str, id);
-                        id
                     };
 
                     card_count += 1;

@@ -66,9 +66,7 @@ pub fn convert_cloze_syntax(text: &str) -> String {
 
     // Restore protected blocks
     let result = restore_math_blocks(&result, math_blocks);
-    let result = restore_code_blocks(&result, code_blocks);
-
-    result
+    restore_code_blocks(&result, code_blocks)
 }
 
 fn find_all_clozes(text: &str) -> Vec<String> {
