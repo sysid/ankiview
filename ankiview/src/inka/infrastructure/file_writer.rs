@@ -7,6 +7,12 @@ pub fn read_markdown_file(path: impl AsRef<Path>) -> Result<String> {
         .context("Failed to read markdown file")
 }
 
+/// Write markdown content to file
+pub fn write_markdown_file(path: impl AsRef<Path>, content: &str) -> Result<()> {
+    std::fs::write(path.as_ref(), content)
+        .context("Failed to write markdown file")
+}
+
 /// Inject Anki ID before a note in markdown content
 /// If the note already has an ID, returns content unchanged
 pub fn inject_anki_id(content: &str, note_pattern: &str, anki_id: i64) -> String {
@@ -147,5 +153,60 @@ Deck: Test
         let result = inject_anki_id(content, "1. Question", 1111111111);
 
         assert_eq!(result, "Some text\n\n<!--ID:1111111111-->\n1. Question\n> Answer\n\nMore text");
+    }
+
+    #[test]
+    fn given_content_when_writing_then_creates_file() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("output.md");
+
+        let content = "# Test\n\nSome content";
+
+        write_markdown_file(&file_path, content).unwrap();
+
+        assert!(file_path.exists());
+        let written = fs::read_to_string(&file_path).unwrap();
+        assert_eq!(written, content);
+    }
+
+    #[test]
+    fn given_existing_file_when_writing_then_overwrites() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("output.md");
+
+        // Write initial content
+        fs::write(&file_path, "Old content").unwrap();
+
+        // Overwrite with new content
+        let new_content = "New content";
+        write_markdown_file(&file_path, new_content).unwrap();
+
+        let written = fs::read_to_string(&file_path).unwrap();
+        assert_eq!(written, new_content);
+    }
+
+    #[test]
+    fn given_round_trip_when_reading_and_writing_then_preserves_content() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("roundtrip.md");
+
+        let original = r#"---
+Deck: Test
+
+<!--ID:1234567890-->
+1. Question?
+> Answer!
+
+2. Another question
+> Another answer
+---"#;
+
+        // Write
+        write_markdown_file(&file_path, original).unwrap();
+
+        // Read back
+        let read_back = read_markdown_file(&file_path).unwrap();
+
+        assert_eq!(read_back, original);
     }
 }
