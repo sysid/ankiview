@@ -213,6 +213,49 @@ impl AnkiRepository {
         debug!(note_id = note.id.0, "Created Cloze note");
         Ok(note.id.0)
     }
+
+    /// Update an existing note's fields
+    /// For Basic notes: updates front (field 0) and back (field 1)
+    /// For Cloze notes: updates text (field 0)
+    pub fn update_note(&mut self, note_id: i64, fields: &[String]) -> Result<()> {
+        use anki::notes::NoteId;
+
+        // Get the existing note
+        let mut note = self
+            .collection
+            .storage
+            .get_note(NoteId(note_id))
+            .context("Failed to get note from storage")?
+            .ok_or_else(|| anyhow::anyhow!("Note not found: {}", note_id))?;
+
+        // Update each field
+        for (index, field_value) in fields.iter().enumerate() {
+            note.set_field(index, field_value)
+                .with_context(|| format!("Failed to set field {} on note {}", index, note_id))?;
+        }
+
+        // Save the updated note
+        self.collection
+            .update_note(&mut note)
+            .context("Failed to update note in collection")?;
+
+        debug!(note_id, "Updated note fields");
+        Ok(())
+    }
+
+    /// Check if a note exists by ID
+    pub fn note_exists(&self, note_id: i64) -> Result<bool> {
+        use anki::notes::NoteId;
+
+        let exists = self
+            .collection
+            .storage
+            .get_note(NoteId(note_id))
+            .context("Failed to check note existence")?
+            .is_some();
+
+        Ok(exists)
+    }
 }
 
 impl NoteRepository for AnkiRepository {
@@ -446,5 +489,51 @@ mod tests {
         let note = repo.get_note(note_id).unwrap();
         assert_eq!(note.id, note_id);
         assert!(note.front.contains("42"));
+    }
+
+    #[test]
+    fn given_existing_note_when_updating_then_fields_change() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+
+        // Create a note
+        let note_id = repo
+            .create_basic_note("Original Front", "Original Back", "Default", &vec![])
+            .unwrap();
+
+        // Update it
+        let new_fields = vec!["Updated Front".to_string(), "Updated Back".to_string()];
+        repo.update_note(note_id, &new_fields).unwrap();
+
+        // Retrieve and verify
+        let note = repo.get_note(note_id).unwrap();
+        assert!(note.front.contains("Updated Front"));
+        assert!(note.back.contains("Updated Back"));
+    }
+
+    #[test]
+    fn given_nonexistent_note_when_updating_then_returns_error() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+
+        let result = repo.update_note(9999999, &vec!["Test".to_string()]);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn given_existing_note_when_checking_exists_then_returns_true() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+
+        let note_id = repo
+            .create_basic_note("Front", "Back", "Default", &vec![])
+            .unwrap();
+
+        assert!(repo.note_exists(note_id).unwrap());
+    }
+
+    #[test]
+    fn given_nonexistent_note_when_checking_exists_then_returns_false() {
+        let (_temp_dir, repo) = create_test_collection().unwrap();
+
+        assert!(!repo.note_exists(9999999).unwrap());
     }
 }
