@@ -49,4 +49,15 @@ pub enum Command {
         #[arg(value_name = "SEARCH")]
         search: Option<String>,
     },
+
+    /// Collect markdown cards into Anki
+    Collect {
+        /// Path to markdown file or directory
+        #[arg(value_name = "PATH")]
+        path: PathBuf,
+
+        /// Process directory recursively
+        #[arg(short, long)]
+        recursive: bool,
+    },
 }

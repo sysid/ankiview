@@ -146,7 +146,29 @@ impl CardCollector {
     /// Process a directory recursively
     /// Returns the number of cards processed
     pub fn process_directory(&mut self, dir_path: impl AsRef<Path>) -> Result<usize> {
-        todo!("Implement CardCollector::process_directory")
+        let dir_path = dir_path.as_ref();
+
+        if !dir_path.is_dir() {
+            return Err(anyhow::anyhow!("Path is not a directory: {:?}", dir_path));
+        }
+
+        let mut total_count = 0;
+
+        // Walk directory recursively
+        for entry in walkdir::WalkDir::new(dir_path)
+            .follow_links(false)
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
+            let path = entry.path();
+
+            // Only process markdown files
+            if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("md") {
+                total_count += self.process_file(path)?;
+            }
+        }
+
+        Ok(total_count)
     }
 }
 
@@ -279,5 +301,45 @@ Deck: TestDeck
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn given_directory_with_markdown_files_when_processing_recursively_then_processes_all() {
+        let (temp_dir, collection_path, _media_dir) = create_test_collection();
+
+        // Create directory structure with markdown files
+        let notes_dir = temp_dir.path().join("notes");
+        fs::create_dir(&notes_dir).unwrap();
+
+        let subdir = notes_dir.join("subdirectory");
+        fs::create_dir(&subdir).unwrap();
+
+        // File 1 in root notes dir
+        let file1 = notes_dir.join("file1.md");
+        fs::write(&file1, r#"---
+Deck: Test
+
+1. Question 1?
+> Answer 1
+---"#).unwrap();
+
+        // File 2 in subdirectory
+        let file2 = subdir.join("file2.md");
+        fs::write(&file2, r#"---
+Deck: Test
+
+1. Question 2?
+> Answer 2
+---"#).unwrap();
+
+        // Non-markdown file (should be ignored)
+        let txt_file = notes_dir.join("readme.txt");
+        fs::write(&txt_file, "This is not markdown").unwrap();
+
+        let mut collector = CardCollector::new(&collection_path).unwrap();
+        let count = collector.process_directory(&notes_dir).unwrap();
+
+        // Should process both markdown files
+        assert_eq!(count, 2);
     }
 }
