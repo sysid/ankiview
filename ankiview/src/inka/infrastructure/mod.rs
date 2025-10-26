@@ -1,2 +1,3 @@
 pub mod markdown;
 pub mod file_writer;
+pub mod media_handler;
