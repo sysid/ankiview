@@ -66,6 +66,19 @@ pub fn copy_media_to_anki(
     Ok(filename.to_string())
 }
 
+/// Update image paths in HTML to use Anki media filenames
+/// Takes a mapping of original paths to Anki filenames
+pub fn update_media_paths_in_html(html: &str, path_mapping: &std::collections::HashMap<String, String>) -> String {
+    let mut result = html.to_string();
+
+    // Replace each original path with its Anki filename
+    for (original_path, anki_filename) in path_mapping {
+        result = result.replace(original_path, anki_filename);
+    }
+
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -227,5 +240,82 @@ HTTPS: ![secure](https://example.com/photo.png)
 
         // File should be in media dir root (not in subdirectory)
         assert!(media_dir.join("photo.jpg").exists());
+    }
+
+    #[test]
+    fn given_html_with_image_src_when_updating_then_replaces_path() {
+        use std::collections::HashMap;
+
+        let html = r#"<p>Some text <img src="images/photo.png" alt="Photo"> more text</p>"#;
+        let mut mapping = HashMap::new();
+        mapping.insert("images/photo.png".to_string(), "photo.png".to_string());
+
+        let updated = update_media_paths_in_html(html, &mapping);
+
+        assert!(updated.contains(r#"<img src="photo.png""#));
+        assert!(!updated.contains(r#"images/photo.png"#));
+    }
+
+    #[test]
+    fn given_html_with_multiple_images_when_updating_then_replaces_all() {
+        use std::collections::HashMap;
+
+        let html = r#"
+        <img src="path/to/image1.jpg">
+        <p>Text</p>
+        <img src="another/image2.png">
+        "#;
+
+        let mut mapping = HashMap::new();
+        mapping.insert("path/to/image1.jpg".to_string(), "image1.jpg".to_string());
+        mapping.insert("another/image2.png".to_string(), "image2.png".to_string());
+
+        let updated = update_media_paths_in_html(html, &mapping);
+
+        assert!(updated.contains(r#"src="image1.jpg""#));
+        assert!(updated.contains(r#"src="image2.png""#));
+        assert!(!updated.contains("path/to/"));
+        assert!(!updated.contains("another/"));
+    }
+
+    #[test]
+    fn given_html_with_no_matching_paths_when_updating_then_unchanged() {
+        use std::collections::HashMap;
+
+        let html = r#"<p>Text without images</p>"#;
+        let mapping = HashMap::new();
+
+        let updated = update_media_paths_in_html(html, &mapping);
+
+        assert_eq!(updated, html);
+    }
+
+    #[test]
+    fn given_html_with_unmapped_image_when_updating_then_leaves_unchanged() {
+        use std::collections::HashMap;
+
+        let html = r#"<img src="unmapped.png"> and <img src="mapped.jpg">"#;
+        let mut mapping = HashMap::new();
+        mapping.insert("mapped.jpg".to_string(), "new_mapped.jpg".to_string());
+
+        let updated = update_media_paths_in_html(html, &mapping);
+
+        // Should update only mapped path
+        assert!(updated.contains(r#"src="new_mapped.jpg""#));
+        // Should leave unmapped path as-is
+        assert!(updated.contains(r#"src="unmapped.png""#));
+    }
+
+    #[test]
+    fn given_markdown_img_syntax_when_updating_then_replaces_path() {
+        use std::collections::HashMap;
+
+        let html = r#"<p><img src="images/diagram.png" alt="Diagram" /></p>"#;
+        let mut mapping = HashMap::new();
+        mapping.insert("images/diagram.png".to_string(), "diagram.png".to_string());
+
+        let updated = update_media_paths_in_html(html, &mapping);
+
+        assert!(updated.contains(r#"src="diagram.png""#));
     }
 }
