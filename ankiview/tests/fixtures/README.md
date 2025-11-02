@@ -3,7 +3,7 @@
 ## Golden Test Dataset
 
 **Source**: `/Users/Q187392/dev/s/private/ankiview/data/testuser/`
-**Fixture Location**: `test_collection/`
+**Fixture Location**: `test_collection/User 1/`
 
 **IMPORTANT**: The golden dataset in the source location is READ-ONLY. Never modify it. All tests work with copies.
 

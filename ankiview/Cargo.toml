@@ -1,6 +1,6 @@
 [package]
 name = "ankiview"
-version = "0.4.0"
+version = "1.0.0"
 edition = "2021"
 authors = ["sysid <sysid@gmx.de>"]
 description = "Fast Anki card viewer"
@@ -27,6 +27,14 @@ tempfile = "3.17.1"
 thiserror = "2.0.11"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+
+# inka dependencies
+markdown-it = "0.6"
+toml = "0.8"
+sha2 = "0.10"
+walkdir = "2.4"
+reqwest = { version = "0.11", features = ["blocking"] }
+lazy_static = "1.4"
 
 [[bin]]
 name = "build_test_collection"

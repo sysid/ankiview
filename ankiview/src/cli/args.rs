@@ -49,4 +49,44 @@ pub enum Command {
         #[arg(value_name = "SEARCH")]
         search: Option<String>,
     },
+
+    /// Collect markdown cards into Anki
+    ///
+    /// Processes markdown files containing flashcards and imports them into your Anki collection.
+    /// Cards are automatically tracked with ID comments, allowing updates without creating duplicates.
+    Collect {
+        /// Path to markdown file or directory containing .md files
+        #[arg(value_name = "PATH")]
+        path: PathBuf,
+
+        /// Process directory recursively, scanning all subdirectories for .md files.
+        /// Without this flag, only processes files in the specified directory (non-recursive).
+        #[arg(short, long)]
+        recursive: bool,
+
+        /// Overwrite media files when filename conflicts occur in collection.media/.
+        /// Without this flag, processing stops with an error if a different file with the same name exists.
+        /// Use when you want to replace existing images with updated versions.
+        #[arg(long)]
+        force: bool,
+
+        /// Continue processing remaining files even if errors occur.
+        /// Errors are collected and reported at the end instead of stopping immediately.
+        /// Useful for batch processing where you want to see all issues at once.
+        #[arg(short, long)]
+        ignore_errors: bool,
+
+        /// Process all files regardless of hash cache, forcing a complete rebuild.
+        /// By default, unchanged files are skipped for performance (tracked via SHA256 hashes).
+        /// Use this when you want to ensure all cards are re-processed from scratch.
+        #[arg(short = 'f', long)]
+        full_sync: bool,
+
+        /// Search Anki for existing notes by content and inject their IDs into markdown.
+        /// Prevents duplicate creation when markdown files lack ID comments (<!--ID:123-->).
+        /// Useful for recovering lost IDs or importing cards from other sources.
+        /// Matches notes by comparing HTML field content.
+        #[arg(short = 'u', long)]
+        update_ids: bool,
+    },
 }

@@ -5,7 +5,7 @@
 set -euo pipefail
 
 GOLDEN_SOURCE="/Users/Q187392/dev/s/private/ankiview/data/testuser"
-FIXTURE_TARGET="ankiview/tests/fixtures/test_collection"
+FIXTURE_TARGET="ankiview/tests/fixtures/test_collection/User 1"
 
 echo "Copying golden dataset to test fixtures..."
 

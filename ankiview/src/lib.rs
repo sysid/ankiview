@@ -3,6 +3,7 @@ pub mod application;
 pub mod cli;
 pub mod domain;
 pub mod infrastructure;
+pub mod inka;
 pub mod ports;
 pub mod util;
 
@@ -33,6 +34,22 @@ pub fn run(args: Args) -> Result<()> {
         Command::View { note_id, json } => handle_view_command(note_id, json, collection_path),
         Command::Delete { note_id } => handle_delete_command(note_id, collection_path),
         Command::List { search } => handle_list_command(search.as_deref(), collection_path),
+        Command::Collect {
+            path,
+            recursive,
+            force,
+            ignore_errors,
+            full_sync,
+            update_ids,
+        } => handle_collect_command(
+            path,
+            recursive,
+            force,
+            ignore_errors,
+            full_sync,
+            update_ids,
+            collection_path,
+        ),
     }
 }
 
@@ -108,6 +125,80 @@ fn handle_list_command(search_query: Option<&str>, collection_path: PathBuf) -> 
     for note in notes {
         let first_line = util::text::extract_first_line(&note.front);
         println!("{}\t{}", note.id, first_line);
+    }
+
+    Ok(())
+}
+
+fn handle_collect_command(
+    path: PathBuf,
+    recursive: bool,
+    force: bool,
+    ignore_errors: bool,
+    full_sync: bool,
+    update_ids: bool,
+    collection_path: PathBuf,
+) -> Result<()> {
+    use crate::inka::application::card_collector::CardCollector;
+
+    info!(
+        ?path,
+        recursive, force, ignore_errors, full_sync, update_ids, "Collecting markdown cards"
+    );
+
+    // Initialize collector with force, full_sync, update_ids, and ignore_errors flags
+    let mut collector = CardCollector::new(
+        &collection_path,
+        force,
+        full_sync,
+        update_ids,
+        ignore_errors,
+    )?;
+
+    // Process based on path type
+    let total_cards = if path.is_file() {
+        // Single file
+        collector.process_file(&path)?
+    } else if path.is_dir() {
+        if recursive {
+            // Recursive directory processing
+            collector.process_directory(&path)?
+        } else {
+            // Non-recursive - only process .md files in the directory
+            let mut count = 0;
+            for entry in std::fs::read_dir(&path)? {
+                let entry = entry?;
+                let entry_path = entry.path();
+                if entry_path.is_file()
+                    && entry_path.extension().and_then(|s| s.to_str()) == Some("md")
+                {
+                    count += collector.process_file(&entry_path)?;
+                }
+            }
+            count
+        }
+    } else {
+        return Err(anyhow::anyhow!("Path does not exist: {:?}", path));
+    };
+
+    // Print summary
+    println!(
+        "Successfully processed {} card{}",
+        total_cards,
+        if total_cards == 1 { "" } else { "s" }
+    );
+
+    // Print error summary if there were any errors
+    let errors = collector.errors();
+    if !errors.is_empty() {
+        eprintln!(
+            "\n{} error{} occurred:",
+            errors.len(),
+            if errors.len() == 1 { "" } else { "s" }
+        );
+        for error in errors {
+            eprintln!("  {}", error);
+        }
     }
 
     Ok(())

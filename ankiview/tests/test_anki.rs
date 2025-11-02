@@ -169,7 +169,7 @@ fn given_collection_when_listing_with_search_then_returns_filtered_notes() -> Re
     let notes = repo.list_notes(Some("Tree"))?;
 
     // Assert
-    assert!(notes.len() > 0);
+    assert!(!notes.is_empty());
     assert!(notes.iter().any(|n| n.front.contains("Tree")));
     Ok(())
 }
