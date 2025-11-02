@@ -11,7 +11,6 @@ lazy_static! {
 pub fn markdown_to_html(text: &str) -> String {
     let mut parser = MarkdownIt::new();
     markdown_it::plugins::cmark::add(&mut parser);
-    markdown_it::plugins::extra::add(&mut parser);
     add_mathjax_plugin(&mut parser);
 
     let html = parser.parse(text).render();
@@ -72,10 +71,10 @@ $$";
         let input = "```rust\nfn main() {}\n```";
         let html = markdown_to_html(input);
 
-        // markdown-it extra plugin uses syntect for syntax highlighting with inline styles
-        assert!(html.contains("<pre"));
-        assert!(html.contains("fn"));
-        assert!(html.contains("main"));
+        // Should output highlight.js-compatible structure
+        assert!(html.contains("<pre><code class=\"language-rust\">"));
+        assert!(html.contains("fn main()"));
+        assert!(html.contains("</code></pre>"));
     }
 
     #[test]
@@ -84,5 +83,36 @@ $$";
         let html = markdown_to_html(input);
 
         assert!(html.contains("<code>inline code</code>"));
+    }
+
+    #[test]
+    fn given_sql_code_block_when_converting_then_uses_language_class() {
+        let input = "```sql\nSELECT * FROM users WHERE id = 1;\n```";
+        let html = markdown_to_html(input);
+
+        assert!(html.contains("<pre><code class=\"language-sql\">"));
+        assert!(html.contains("SELECT * FROM users WHERE id = 1;"));
+        assert!(html.contains("</code></pre>"));
+    }
+
+    #[test]
+    fn given_python_code_block_when_converting_then_uses_language_class() {
+        let input = "```python\nimport model\n\ndef start_mappers():\n    pass\n```";
+        let html = markdown_to_html(input);
+
+        assert!(html.contains("<pre><code class=\"language-python\">"));
+        assert!(html.contains("import model"));
+        assert!(html.contains("def start_mappers():"));
+        assert!(html.contains("</code></pre>"));
+    }
+
+    #[test]
+    fn given_unlabeled_code_block_when_converting_then_still_wraps_properly() {
+        let input = "```\ngeneric code block\n```";
+        let html = markdown_to_html(input);
+
+        assert!(html.contains("<pre><code>"));
+        assert!(html.contains("generic code block"));
+        assert!(html.contains("</code></pre>"));
     }
 }

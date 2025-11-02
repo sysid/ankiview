@@ -7,7 +7,6 @@
    both modes (no error)
 
 ---
-<!--ID:1762088513005-->
 1. This is an image test!
 > ![mungoggo](munggoggo.png)
 > answer
