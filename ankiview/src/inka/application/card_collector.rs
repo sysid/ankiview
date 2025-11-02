@@ -3,15 +3,18 @@ use crate::inka::infrastructure::file_writer;
 use crate::inka::infrastructure::markdown::card_parser;
 use crate::inka::infrastructure::markdown::converter;
 use crate::inka::infrastructure::markdown::section_parser;
+use crate::inka::infrastructure::media_handler;
 use anyhow::{Context, Result};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use tracing::debug;
 
 /// Main use case for collecting markdown cards into Anki
 pub struct CardCollector {
     _collection_path: PathBuf,
-    _media_dir: PathBuf,
+    media_dir: PathBuf,
     repository: AnkiRepository,
-    _force: bool,
+    force: bool,
 }
 
 impl CardCollector {
@@ -35,9 +38,9 @@ impl CardCollector {
 
         Ok(Self {
             _collection_path: collection_path,
-            _media_dir: media_dir,
+            media_dir,
             repository,
-            _force: force,
+            force,
         })
     }
 
@@ -48,6 +51,34 @@ impl CardCollector {
 
         // Read markdown file
         let mut content = file_writer::read_markdown_file(markdown_path)?;
+
+        // Extract and handle media files
+        let image_paths = media_handler::extract_image_paths(&content);
+        let mut path_mapping = HashMap::new();
+
+        for image_path in image_paths {
+            // Resolve relative paths relative to markdown file location
+            let markdown_dir = markdown_path
+                .parent()
+                .ok_or_else(|| anyhow::anyhow!("Cannot determine markdown file directory"))?;
+            let absolute_image_path = markdown_dir.join(&image_path);
+
+            // Copy image to media directory
+            match media_handler::copy_media_to_anki(
+                &absolute_image_path,
+                &self.media_dir,
+                self.force,
+            ) {
+                Ok(filename) => {
+                    debug!("Copied media file: {} -> {}", image_path, filename);
+                    path_mapping.insert(image_path.clone(), filename);
+                }
+                Err(e) => {
+                    return Err(e)
+                        .with_context(|| format!("Failed to copy media file '{}'", image_path));
+                }
+            }
+        }
 
         // Parse sections
         let parser = section_parser::SectionParser::new();
@@ -81,8 +112,14 @@ impl CardCollector {
                     let (front_md, back_md) = card_parser::parse_basic_card_fields(&note_str)?;
 
                     // Convert to HTML
-                    let front_html = converter::markdown_to_html(&front_md);
-                    let back_html = converter::markdown_to_html(&back_md);
+                    let mut front_html = converter::markdown_to_html(&front_md);
+                    let mut back_html = converter::markdown_to_html(&back_md);
+
+                    // Update media paths in HTML
+                    front_html =
+                        media_handler::update_media_paths_in_html(&front_html, &path_mapping);
+                    back_html =
+                        media_handler::update_media_paths_in_html(&back_html, &path_mapping);
 
                     // Create or update note
                     if let Some(id) = existing_id {
@@ -110,7 +147,11 @@ impl CardCollector {
                     let text_transformed = crate::inka::infrastructure::markdown::cloze_converter::convert_cloze_syntax(&text_md);
 
                     // Convert to HTML
-                    let text_html = converter::markdown_to_html(&text_transformed);
+                    let mut text_html = converter::markdown_to_html(&text_transformed);
+
+                    // Update media paths in HTML
+                    text_html =
+                        media_handler::update_media_paths_in_html(&text_html, &path_mapping);
 
                     // Create or update note
                     if let Some(id) = existing_id {
@@ -177,7 +218,7 @@ mod tests {
         let temp_dir = tempfile::tempdir().unwrap();
 
         let fixture_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("tests/fixtures/test_collection/collection.anki2");
+            .join("tests/fixtures/test_collection/User 1/collection.anki2");
         let collection_path = temp_dir.path().join("collection.anki2");
 
         std::fs::copy(&fixture_path, &collection_path).unwrap();
@@ -343,5 +384,44 @@ Deck: Test
 
         // Should process both markdown files
         assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn given_markdown_with_image_when_processing_then_copies_media_file() {
+        let (temp_dir, collection_path, media_dir) = create_test_collection();
+
+        // Create a test image file
+        let images_dir = temp_dir.path().join("images");
+        fs::create_dir(&images_dir).unwrap();
+        let source_image = images_dir.join("test_photo.png");
+        fs::write(&source_image, b"fake png data").unwrap();
+
+        // Create markdown with image reference
+        let markdown_path = temp_dir.path().join("with_image.md");
+        let markdown_content = r#"---
+Deck: TestDeck
+
+1. What is this image?
+> ![test image](images/test_photo.png)
+> This is a test
+---"#;
+        fs::write(&markdown_path, markdown_content).unwrap();
+
+        // Process the file
+        let mut collector = CardCollector::new(&collection_path, false).unwrap();
+        let count = collector.process_file(&markdown_path).unwrap();
+
+        assert_eq!(count, 1);
+
+        // Verify image was copied to media directory
+        let copied_image = media_dir.join("test_photo.png");
+        assert!(
+            copied_image.exists(),
+            "Image should be copied to media directory"
+        );
+
+        // Verify image content is correct
+        let copied_content = fs::read(&copied_image).unwrap();
+        assert_eq!(copied_content, b"fake png data");
     }
 }

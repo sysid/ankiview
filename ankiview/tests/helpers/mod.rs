@@ -43,7 +43,7 @@ impl TestCollection {
     /// Get path to the fixture collection
     fn fixture_collection_path() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("tests/fixtures/test_collection/collection.anki2")
+            .join("tests/fixtures/test_collection/User 1/collection.anki2")
     }
 
     /// Open repository for this test collection

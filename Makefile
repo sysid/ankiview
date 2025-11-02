@@ -31,14 +31,28 @@ ADMIN::  ## ##################################################################
 .PHONY: init-env
 init-env:  ## init-env
 	@rm -fr ~/xxx/*
-	@mkdir -p ~/xxx/ankiview-test
-	@cp -r ankiview/tests/fixtures/test_collection/* ~/xxx/ankiview-test/
-
+	@mkdir -p "$(HOME)/xxx/ankiview-test/"
+	cp -r ankiview/tests/fixtures/test_collection/* "$(HOME)/xxx/ankiview-test/"
+	cp -v ankiview/examples/image-test.md.ori ankiview/examples/image-test.md
+	cp -v ./ankiview/tests/fixtures/munggoggo.png ./ankiview/examples/munggoggo.png
 
 .PHONY: create-note
-create-note:  ## create a note from markdown
-	cargo run --bin ankiview -- -c ~/xxx/ankiview-test/collection.anki2 view 1695797540371
-	cargo run --bin ankiview -- -c ~/xxx/ankiview-test/collection.anki2 collect test.md
+create-note: init-env  ## create a note from markdown
+	# cargo run --bin ankiview -- -c "$(HOME)/xxx/ankiview-test/User 1/collection.anki2" view 1695797540371
+	~/dev/s/private/ankiview/ankiview/target/debug/ankiview -c "$(HOME)/xxx/ankiview-test/User 1/collection.anki2" collect ./ankiview/examples/image-test.md
+	~/dev/s/private/ankiview/ankiview/target/debug/ankiview -c "$(HOME)/xxx/ankiview-test/User 1/collection.anki2" list | grep 'This is an image test!'
+
+	@echo
+	@echo "---- Following test should fail ---"
+	@echo
+	cp ./ankiview/tests/fixtures/gh_activity.png ./ankiview/examples/munggoggo.png
+	~/dev/s/private/ankiview/ankiview/target/debug/ankiview -c "$(HOME)/xxx/ankiview-test/User 1/collection.anki2" collect ./ankiview/examples/image-test.md
+
+.PHONY: anki
+anki:  ## anki
+	-pkill anki
+	# specify base folder with -b
+	open /Applications/Anki.app --args -b $(HOME)/xxx/ankiview-test
 
 .PHONY: test
 test:  ## Run all tests (unit, integration, and doc tests) with debug logging
