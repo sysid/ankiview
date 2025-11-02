@@ -77,6 +77,15 @@ impl CardCollector {
         &self.errors
     }
 
+    /// Add file path footer to HTML content
+    fn add_file_path_footer(&self, html: &str, file_path: &Path) -> String {
+        let footer = format!(
+            r#"<p><span style="font-size: 9pt;">File: {}</span></p>"#,
+            file_path.display()
+        );
+        format!("{}{}", html, footer)
+    }
+
     /// Process a single markdown file and add/update cards in Anki
     /// Returns the number of cards processed
     pub fn process_file(&mut self, markdown_path: impl AsRef<Path>) -> Result<usize> {
@@ -185,6 +194,9 @@ impl CardCollector {
                     back_html =
                         media_handler::update_media_paths_in_html(&back_html, &path_mapping);
 
+                    // Add file path footer to back field
+                    back_html = self.add_file_path_footer(&back_html, markdown_path);
+
                     // Create or update note
                     if let Some(id) = existing_id {
                         // Update existing note
@@ -239,6 +251,9 @@ impl CardCollector {
                     // Update media paths in HTML
                     text_html =
                         media_handler::update_media_paths_in_html(&text_html, &path_mapping);
+
+                    // Add file path footer to text field
+                    text_html = self.add_file_path_footer(&text_html, markdown_path);
 
                     // Create or update note
                     if let Some(id) = existing_id {
@@ -614,5 +629,55 @@ Deck: TestDeck
         // Verify image content is correct
         let copied_content = fs::read(&copied_image).unwrap();
         assert_eq!(copied_content, b"fake png data");
+    }
+
+    #[test]
+    fn given_basic_card_when_processing_then_creates_note_with_footer() {
+        let (temp_dir, collection_path, _media_dir) = create_test_collection();
+
+        let markdown_path = temp_dir.path().join("test_footer.md");
+        let markdown_content = r#"---
+Deck: TestDeck
+
+1. What is Rust?
+> A systems programming language
+---"#;
+        fs::write(&markdown_path, markdown_content).unwrap();
+
+        let mut collector =
+            CardCollector::new(&collection_path, false, false, false, false).unwrap();
+        let count = collector.process_file(&markdown_path).unwrap();
+        assert_eq!(count, 1, "Should create one card");
+    }
+
+    #[test]
+    fn given_cloze_card_when_processing_then_creates_note_with_footer() {
+        let (temp_dir, collection_path, _media_dir) = create_test_collection();
+
+        let markdown_path = temp_dir.path().join("cloze_footer.md");
+        let markdown_content = r#"---
+Deck: TestDeck
+
+1. Rust is a {systems programming} language.
+---"#;
+        fs::write(&markdown_path, markdown_content).unwrap();
+
+        let mut collector =
+            CardCollector::new(&collection_path, false, false, false, false).unwrap();
+        let count = collector.process_file(&markdown_path).unwrap();
+        assert_eq!(count, 1, "Should create one cloze card");
+    }
+
+    #[test]
+    fn given_file_path_footer_helper_when_called_then_formats_correctly() {
+        let (_temp_dir, collection_path, _media_dir) = create_test_collection();
+        let collector = CardCollector::new(&collection_path, false, false, false, false).unwrap();
+
+        let html = "<p>Sample text</p>";
+        let path = std::path::Path::new("/tmp/test.md");
+        let result = collector.add_file_path_footer(html, path);
+
+        assert!(result.starts_with("<p>Sample text</p>"));
+        assert!(result.contains(r#"<p><span style="font-size: 9pt;">File: /tmp/test.md</span></p>"#));
     }
 }
