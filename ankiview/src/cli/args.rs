@@ -59,5 +59,13 @@ pub enum Command {
         /// Process directory recursively
         #[arg(short, long)]
         recursive: bool,
+
+        /// Overwrite conflicting media files
+        #[arg(long)]
+        force: bool,
+
+        /// Continue processing on errors without pausing
+        #[arg(short, long)]
+        ignore_errors: bool,
     },
 }

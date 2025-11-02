@@ -1,11 +1,11 @@
+use super::mathjax_plugin::add_mathjax_plugin;
+use lazy_static::lazy_static;
 use markdown_it::MarkdownIt;
 use regex::Regex;
-use lazy_static::lazy_static;
-use super::mathjax_plugin::add_mathjax_plugin;
 
 lazy_static! {
-    static ref NEWLINE_TAG_REGEX: Regex = Regex::new(r"\n?(<.+?>)\n?")
-        .expect("Failed to compile newline tag regex");
+    static ref NEWLINE_TAG_REGEX: Regex =
+        Regex::new(r"\n?(<.+?>)\n?").expect("Failed to compile newline tag regex");
 }
 
 pub fn markdown_to_html(text: &str) -> String {

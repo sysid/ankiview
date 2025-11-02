@@ -1,5 +1,5 @@
-use markdown_it::parser::inline::{InlineRule, InlineState};
 use markdown_it::parser::block::{BlockRule, BlockState};
+use markdown_it::parser::inline::{InlineRule, InlineState};
 use markdown_it::{MarkdownIt, Node, NodeValue, Renderer};
 
 #[derive(Debug)]

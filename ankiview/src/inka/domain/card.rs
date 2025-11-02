@@ -37,16 +37,14 @@ mod tests {
 
     #[test]
     fn given_basic_card_when_setting_deck_then_updates() {
-        let card = BasicCard::new("Q", "A")
-            .with_deck("MyDeck");
+        let card = BasicCard::new("Q", "A").with_deck("MyDeck");
 
         assert_eq!(card.deck_name(), "MyDeck");
     }
 
     #[test]
     fn given_basic_card_when_setting_tags_then_stores() {
-        let card = BasicCard::new("Q", "A")
-            .with_tags(vec!["tag1".to_string(), "tag2".to_string()]);
+        let card = BasicCard::new("Q", "A").with_tags(vec!["tag1".to_string(), "tag2".to_string()]);
 
         assert_eq!(card.tags(), &["tag1", "tag2"]);
     }
@@ -55,13 +53,15 @@ mod tests {
     fn given_text_with_cloze_when_creating_then_stores_text() {
         let card = ClozeCard::new("The capital of {{c1::France}} is {{c2::Paris}}");
 
-        assert_eq!(card.text_md(), "The capital of {{c1::France}} is {{c2::Paris}}");
+        assert_eq!(
+            card.text_md(),
+            "The capital of {{c1::France}} is {{c2::Paris}}"
+        );
     }
 
     #[test]
     fn given_cloze_card_when_implementing_trait_then_provides_interface() {
-        let card = ClozeCard::new("Text {{c1::cloze}}")
-            .with_deck("TestDeck");
+        let card = ClozeCard::new("Text {{c1::cloze}}").with_deck("TestDeck");
 
         assert_eq!(card.deck_name(), "TestDeck");
         assert_eq!(card.raw_fields(), vec!["Text {{c1::cloze}}"]);
@@ -144,8 +144,12 @@ impl Card for BasicCard {
 
     fn html_fields(&self) -> Vec<String> {
         vec![
-            self.front_html.clone().unwrap_or_else(|| self.front_md.clone()),
-            self.back_html.clone().unwrap_or_else(|| self.back_md.clone()),
+            self.front_html
+                .clone()
+                .unwrap_or_else(|| self.front_md.clone()),
+            self.back_html
+                .clone()
+                .unwrap_or_else(|| self.back_md.clone()),
         ]
     }
 }
@@ -221,8 +225,9 @@ impl Card for ClozeCard {
     }
 
     fn html_fields(&self) -> Vec<String> {
-        vec![
-            self.text_html.clone().unwrap_or_else(|| self.text_md.clone())
-        ]
+        vec![self
+            .text_html
+            .clone()
+            .unwrap_or_else(|| self.text_md.clone())]
     }
 }

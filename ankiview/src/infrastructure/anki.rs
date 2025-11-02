@@ -152,7 +152,8 @@ impl AnkiRepository {
         let mut note = Note::new(&notetype);
         note.set_field(0, front)
             .context("Failed to set front field")?;
-        note.set_field(1, back).context("Failed to set back field")?;
+        note.set_field(1, back)
+            .context("Failed to set back field")?;
 
         // Add tags
         for tag in tags {
@@ -198,7 +199,8 @@ impl AnkiRepository {
 
         // Create a new note
         let mut note = Note::new(&notetype);
-        note.set_field(0, text).context("Failed to set text field")?;
+        note.set_field(0, text)
+            .context("Failed to set text field")?;
 
         // Add tags
         for tag in tags {
@@ -481,9 +483,7 @@ mod tests {
         let (_temp_dir, mut repo) = create_test_collection().unwrap();
 
         let cloze_text = "Answer: {{c1::42}}";
-        let note_id = repo
-            .create_cloze_note(cloze_text, "Default", &[])
-            .unwrap();
+        let note_id = repo.create_cloze_note(cloze_text, "Default", &[]).unwrap();
 
         // Should be able to retrieve the note
         let note = repo.get_note(note_id).unwrap();

@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 /// TOML configuration for inka collection
@@ -46,16 +46,36 @@ pub struct HighlightConfig {
 }
 
 // Default value functions
-fn default_profile() -> String { String::new() }
-fn default_deck() -> String { "Default".to_string() }
-fn default_folder() -> String { String::new() }
-fn default_path() -> String { String::new() }
-fn default_basic_type() -> String { "Inka Basic".to_string() }
-fn default_front_field() -> String { "Front".to_string() }
-fn default_back_field() -> String { "Back".to_string() }
-fn default_cloze_type() -> String { "Inka Cloze".to_string() }
-fn default_cloze_field() -> String { "Text".to_string() }
-fn default_highlight_style() -> String { "monokai".to_string() }
+fn default_profile() -> String {
+    String::new()
+}
+fn default_deck() -> String {
+    "Default".to_string()
+}
+fn default_folder() -> String {
+    String::new()
+}
+fn default_path() -> String {
+    String::new()
+}
+fn default_basic_type() -> String {
+    "Inka Basic".to_string()
+}
+fn default_front_field() -> String {
+    "Front".to_string()
+}
+fn default_back_field() -> String {
+    "Back".to_string()
+}
+fn default_cloze_type() -> String {
+    "Inka Cloze".to_string()
+}
+fn default_cloze_field() -> String {
+    "Text".to_string()
+}
+fn default_highlight_style() -> String {
+    "monokai".to_string()
+}
 
 impl Default for Defaults {
     fn default() -> Self {
@@ -91,22 +111,20 @@ impl Default for HighlightConfig {
 impl Config {
     /// Load configuration from TOML file
     pub fn load(path: impl AsRef<Path>) -> Result<Self> {
-        let content = std::fs::read_to_string(path.as_ref())
-            .context("Failed to read config file")?;
+        let content =
+            std::fs::read_to_string(path.as_ref()).context("Failed to read config file")?;
 
-        let config: Config = toml::from_str(&content)
-            .context("Failed to parse TOML config")?;
+        let config: Config = toml::from_str(&content).context("Failed to parse TOML config")?;
 
         Ok(config)
     }
 
     /// Save configuration to TOML file
     pub fn save(&self, path: impl AsRef<Path>) -> Result<()> {
-        let toml_string = toml::to_string_pretty(self)
-            .context("Failed to serialize config to TOML")?;
+        let toml_string =
+            toml::to_string_pretty(self).context("Failed to serialize config to TOML")?;
 
-        std::fs::write(path.as_ref(), toml_string)
-            .context("Failed to write config file")?;
+        std::fs::write(path.as_ref(), toml_string).context("Failed to write config file")?;
 
         Ok(())
     }

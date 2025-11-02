@@ -3,14 +3,12 @@ use std::path::Path;
 
 /// Read markdown file content
 pub fn read_markdown_file(path: impl AsRef<Path>) -> Result<String> {
-    std::fs::read_to_string(path.as_ref())
-        .context("Failed to read markdown file")
+    std::fs::read_to_string(path.as_ref()).context("Failed to read markdown file")
 }
 
 /// Write markdown content to file
 pub fn write_markdown_file(path: impl AsRef<Path>, content: &str) -> Result<()> {
-    std::fs::write(path.as_ref(), content)
-        .context("Failed to write markdown file")
+    std::fs::write(path.as_ref(), content).context("Failed to write markdown file")
 }
 
 /// Inject Anki ID before a note in markdown content
@@ -152,7 +150,10 @@ Deck: Test
 
         let result = inject_anki_id(content, "1. Question", 1111111111);
 
-        assert_eq!(result, "Some text\n\n<!--ID:1111111111-->\n1. Question\n> Answer\n\nMore text");
+        assert_eq!(
+            result,
+            "Some text\n\n<!--ID:1111111111-->\n1. Question\n> Answer\n\nMore text"
+        );
     }
 
     #[test]

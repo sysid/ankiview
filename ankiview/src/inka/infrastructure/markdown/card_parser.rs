@@ -1,14 +1,13 @@
-use regex::Regex;
-use lazy_static::lazy_static;
 use anyhow::Result;
+use lazy_static::lazy_static;
+use regex::Regex;
 
 lazy_static! {
-    static ref BASIC_CARD_REGEX: Regex = Regex::new(
-        r"(?m)(?:^<!--ID:\S+-->\n)?^\d+\.[\s\S]+?(?:^>.*?(?:\n|$))+"
-    ).expect("Failed to compile basic card regex");
-
-    static ref ID_REGEX: Regex = Regex::new(r"(?m)^<!--ID:(\S+)-->$")
-        .expect("Failed to compile ID regex");
+    static ref BASIC_CARD_REGEX: Regex =
+        Regex::new(r"(?m)(?:^<!--ID:\S+-->\n)?^\d+\.[\s\S]+?(?:^>.*?(?:\n|$))+")
+            .expect("Failed to compile basic card regex");
+    static ref ID_REGEX: Regex =
+        Regex::new(r"(?m)^<!--ID:(\S+)-->$").expect("Failed to compile ID regex");
 }
 
 pub fn is_basic_card(note_str: &str) -> bool {
@@ -18,7 +17,10 @@ pub fn is_basic_card(note_str: &str) -> bool {
 pub fn is_cloze_card(note_str: &str) -> bool {
     // A cloze card has curly braces (for cloze deletions)
     // and doesn't have the answer marker (>)
-    note_str.contains('{') && !note_str.lines().any(|line| line.trim_start().starts_with('>'))
+    note_str.contains('{')
+        && !note_str
+            .lines()
+            .any(|line| line.trim_start().starts_with('>'))
 }
 
 pub fn parse_basic_card_fields(note_str: &str) -> Result<(String, String)> {

@@ -26,7 +26,8 @@ Deck: IntegrationTest
 
     // Act
     let mut collector = ankiview::inka::application::card_collector::CardCollector::new(
-        &test_collection.collection_path
+        &test_collection.collection_path,
+        false,
     )?;
     let count = collector.process_file(&markdown_path)?;
 
@@ -35,7 +36,10 @@ Deck: IntegrationTest
 
     // Verify IDs were injected
     let updated_content = fs::read_to_string(&markdown_path)?;
-    assert!(updated_content.contains("<!--ID:"), "Should have ID comments");
+    assert!(
+        updated_content.contains("<!--ID:"),
+        "Should have ID comments"
+    );
 
     // Count ID occurrences
     let id_count = updated_content.matches("<!--ID:").count();
@@ -58,24 +62,31 @@ fn given_directory_when_collecting_recursively_then_processes_all_files() -> Res
 
     // File 1: Basic cards
     let file1 = notes_dir.join("basics.md");
-    fs::write(&file1, r#"---
+    fs::write(
+        &file1,
+        r#"---
 Deck: Integration
 
 1. Basic question?
 > Basic answer
----"#)?;
+---"#,
+    )?;
 
     // File 2: Cloze card in subdirectory
     let file2 = subdir.join("cloze.md");
-    fs::write(&file2, r#"---
+    fs::write(
+        &file2,
+        r#"---
 Deck: Integration
 
 1. {Cloze deletion} test.
----"#)?;
+---"#,
+    )?;
 
     // Act
     let mut collector = ankiview::inka::application::card_collector::CardCollector::new(
-        &test_collection.collection_path
+        &test_collection.collection_path,
+        false,
     )?;
     let count = collector.process_directory(&notes_dir)?;
 
@@ -110,7 +121,8 @@ Deck: UpdateTest
 
     // First collection run
     let mut collector = ankiview::inka::application::card_collector::CardCollector::new(
-        &test_collection.collection_path
+        &test_collection.collection_path,
+        false,
     )?;
     let count1 = collector.process_file(&markdown_path)?;
     assert_eq!(count1, 1);
@@ -122,7 +134,7 @@ Deck: UpdateTest
     // Modify the answer
     let modified_content = content_with_id.replace(
         "A programming language",
-        "A safe systems programming language"
+        "A safe systems programming language",
     );
     fs::write(&markdown_path, &modified_content)?;
 
@@ -130,7 +142,10 @@ Deck: UpdateTest
     let count2 = collector.process_file(&markdown_path)?;
 
     // Assert
-    assert_eq!(count2, 1, "Should still process 1 card (update, not create)");
+    assert_eq!(
+        count2, 1,
+        "Should still process 1 card (update, not create)"
+    );
 
     // Verify still has same ID
     let final_content = fs::read_to_string(&markdown_path)?;
@@ -167,7 +182,8 @@ Tags: test integration
     // Act
     let count = {
         let mut collector = ankiview::inka::application::card_collector::CardCollector::new(
-            &test_collection.collection_path
+            &test_collection.collection_path,
+            false,
         )?;
         collector.process_file(&markdown_path)?
     }; // Collector dropped here, releasing the lock

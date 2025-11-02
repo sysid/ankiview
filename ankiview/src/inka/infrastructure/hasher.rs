@@ -1,13 +1,13 @@
 use anyhow::{Context, Result};
-use sha2::{Sha256, Digest};
-use std::path::Path;
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::collections::HashMap;
+use std::path::Path;
 
 /// Calculate SHA256 hash of a file's content
 pub fn calculate_file_hash(path: impl AsRef<Path>) -> Result<String> {
-    let content = std::fs::read_to_string(path.as_ref())
-        .context("Failed to read file for hashing")?;
+    let content =
+        std::fs::read_to_string(path.as_ref()).context("Failed to read file for hashing")?;
 
     let mut hasher = Sha256::new();
     hasher.update(content.as_bytes());
@@ -37,10 +37,9 @@ impl HashCache {
         let cache_path = path.as_ref().to_path_buf();
 
         let hashes = if cache_path.exists() {
-            let content = std::fs::read_to_string(&cache_path)
-                .context("Failed to read hash cache file")?;
-            serde_json::from_str(&content)
-                .context("Failed to parse hash cache JSON")?
+            let content =
+                std::fs::read_to_string(&cache_path).context("Failed to read hash cache file")?;
+            serde_json::from_str(&content).context("Failed to parse hash cache JSON")?
         } else {
             HashMap::new()
         };
@@ -50,11 +49,10 @@ impl HashCache {
 
     /// Save hash cache to file
     pub fn save(&self) -> Result<()> {
-        let json = serde_json::to_string_pretty(&self.hashes)
-            .context("Failed to serialize hash cache")?;
+        let json =
+            serde_json::to_string_pretty(&self.hashes).context("Failed to serialize hash cache")?;
 
-        std::fs::write(&self.cache_path, json)
-            .context("Failed to write hash cache file")?;
+        std::fs::write(&self.cache_path, json).context("Failed to write hash cache file")?;
 
         Ok(())
     }
@@ -62,7 +60,8 @@ impl HashCache {
     /// Check if file has changed compared to cached hash
     /// Returns true if file is new or content has changed
     pub fn file_has_changed(&self, filepath: impl AsRef<Path>) -> Result<bool> {
-        let path_str = filepath.as_ref()
+        let path_str = filepath
+            .as_ref()
             .to_str()
             .ok_or_else(|| anyhow::anyhow!("Invalid file path"))?
             .to_string();
@@ -78,7 +77,8 @@ impl HashCache {
 
     /// Update hash for a file in the cache
     pub fn update_hash(&mut self, filepath: impl AsRef<Path>) -> Result<()> {
-        let path_str = filepath.as_ref()
+        let path_str = filepath
+            .as_ref()
             .to_str()
             .ok_or_else(|| anyhow::anyhow!("Invalid file path"))?
             .to_string();

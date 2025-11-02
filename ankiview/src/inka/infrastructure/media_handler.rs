@@ -1,5 +1,5 @@
-use regex::Regex;
 use lazy_static::lazy_static;
+use regex::Regex;
 
 lazy_static! {
     // Match markdown images: ![alt](path)
@@ -46,6 +46,7 @@ pub fn extract_image_paths(markdown: &str) -> Vec<String> {
 pub fn copy_media_to_anki(
     source_path: &std::path::Path,
     media_dir: &std::path::Path,
+    force: bool,
 ) -> anyhow::Result<String> {
     use anyhow::Context;
 
@@ -57,18 +58,67 @@ pub fn copy_media_to_anki(
 
     let dest_path = media_dir.join(filename);
 
-    // Skip copying if file already exists in media directory
-    if !dest_path.exists() {
-        std::fs::copy(source_path, &dest_path)
-            .context("Failed to copy media file")?;
+    // Check if file exists in media directory
+    if dest_path.exists() {
+        // Use filecmp equivalent - compare file contents
+        let files_identical = files_are_identical(source_path, &dest_path)
+            .context("Failed to compare file contents")?;
+
+        if files_identical {
+            // Same file already exists - optimization, skip copy
+            return Ok(filename.to_string());
+        }
+
+        // Files have different content
+        if !force {
+            // Error on conflict without --force
+            return Err(anyhow::anyhow!(
+                "Different file with the same name \"{}\" already exists in Anki Media folder. \
+                 Use --force to overwrite.",
+                filename
+            ));
+        }
+
+        // force=true: overwrite existing file
     }
+
+    // Copy file (either new or force overwrite)
+    std::fs::copy(source_path, &dest_path).context("Failed to copy media file")?;
 
     Ok(filename.to_string())
 }
 
+/// Compare two files for identical content
+fn files_are_identical(path1: &std::path::Path, path2: &std::path::Path) -> anyhow::Result<bool> {
+    use std::io::Read;
+
+    let mut file1 = std::fs::File::open(path1)?;
+    let mut file2 = std::fs::File::open(path2)?;
+
+    // Quick size check first
+    let meta1 = file1.metadata()?;
+    let meta2 = file2.metadata()?;
+
+    if meta1.len() != meta2.len() {
+        return Ok(false);
+    }
+
+    // Compare contents byte by byte
+    let mut buf1 = Vec::new();
+    let mut buf2 = Vec::new();
+
+    file1.read_to_end(&mut buf1)?;
+    file2.read_to_end(&mut buf2)?;
+
+    Ok(buf1 == buf2)
+}
+
 /// Update image paths in HTML to use Anki media filenames
 /// Takes a mapping of original paths to Anki filenames
-pub fn update_media_paths_in_html(html: &str, path_mapping: &std::collections::HashMap<String, String>) -> String {
+pub fn update_media_paths_in_html(
+    html: &str,
+    path_mapping: &std::collections::HashMap<String, String>,
+) -> String {
     let mut result = html.to_string();
 
     // Replace each original path with its Anki filename
@@ -164,7 +214,7 @@ HTTPS: ![secure](https://example.com/photo.png)
         let media_dir = temp_dir.path().join("collection.media");
         fs::create_dir(&media_dir).unwrap();
 
-        let filename = copy_media_to_anki(&source_file, &media_dir).unwrap();
+        let filename = copy_media_to_anki(&source_file, &media_dir, false).unwrap();
 
         // Should return just the filename
         assert_eq!(filename, "test_image.png");
@@ -179,28 +229,77 @@ HTTPS: ![secure](https://example.com/photo.png)
     }
 
     #[test]
-    fn given_existing_file_when_copying_then_skips_duplicate() {
+    fn given_identical_file_when_copying_without_force_then_skips() {
         use std::fs;
         use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();
         let source_file = temp_dir.path().join("image.png");
-        fs::write(&source_file, b"original").unwrap();
+        fs::write(&source_file, b"same content").unwrap();
 
         let media_dir = temp_dir.path().join("collection.media");
         fs::create_dir(&media_dir).unwrap();
 
-        // Pre-create the file in media dir
+        // Pre-create identical file in media dir
         let existing_file = media_dir.join("image.png");
-        fs::write(&existing_file, b"already exists").unwrap();
+        fs::write(&existing_file, b"same content").unwrap();
 
         // Copy should succeed and return filename
-        let filename = copy_media_to_anki(&source_file, &media_dir).unwrap();
+        let filename = copy_media_to_anki(&source_file, &media_dir, false).unwrap();
         assert_eq!(filename, "image.png");
 
-        // Should not overwrite existing file
+        // Should not overwrite (content stays same but we verify no error)
         let content = fs::read(&existing_file).unwrap();
-        assert_eq!(content, b"already exists");
+        assert_eq!(content, b"same content");
+    }
+
+    #[test]
+    fn given_different_file_when_copying_without_force_then_errors() {
+        use std::fs;
+        use tempfile::TempDir;
+
+        let temp_dir = TempDir::new().unwrap();
+        let source_file = temp_dir.path().join("image.png");
+        fs::write(&source_file, b"new content").unwrap();
+
+        let media_dir = temp_dir.path().join("collection.media");
+        fs::create_dir(&media_dir).unwrap();
+
+        // Pre-create different file in media dir
+        let existing_file = media_dir.join("image.png");
+        fs::write(&existing_file, b"old content").unwrap();
+
+        // Copy should fail with error about conflict
+        let result = copy_media_to_anki(&source_file, &media_dir, false);
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("already exists"));
+        assert!(error_msg.contains("--force"));
+    }
+
+    #[test]
+    fn given_different_file_when_copying_with_force_then_overwrites() {
+        use std::fs;
+        use tempfile::TempDir;
+
+        let temp_dir = TempDir::new().unwrap();
+        let source_file = temp_dir.path().join("image.png");
+        fs::write(&source_file, b"new content").unwrap();
+
+        let media_dir = temp_dir.path().join("collection.media");
+        fs::create_dir(&media_dir).unwrap();
+
+        // Pre-create different file in media dir
+        let existing_file = media_dir.join("image.png");
+        fs::write(&existing_file, b"old content").unwrap();
+
+        // Copy with force should succeed
+        let filename = copy_media_to_anki(&source_file, &media_dir, true).unwrap();
+        assert_eq!(filename, "image.png");
+
+        // Should overwrite with new content
+        let content = fs::read(&existing_file).unwrap();
+        assert_eq!(content, b"new content");
     }
 
     #[test]
@@ -214,7 +313,7 @@ HTTPS: ![secure](https://example.com/photo.png)
         let media_dir = temp_dir.path().join("collection.media");
         fs::create_dir(&media_dir).unwrap();
 
-        let result = copy_media_to_anki(&nonexistent, &media_dir);
+        let result = copy_media_to_anki(&nonexistent, &media_dir, false);
         assert!(result.is_err());
     }
 
@@ -233,7 +332,7 @@ HTTPS: ![secure](https://example.com/photo.png)
         let media_dir = temp_dir.path().join("collection.media");
         fs::create_dir(&media_dir).unwrap();
 
-        let filename = copy_media_to_anki(&source_file, &media_dir).unwrap();
+        let filename = copy_media_to_anki(&source_file, &media_dir, false).unwrap();
 
         // Should return just filename, not path
         assert_eq!(filename, "photo.jpg");

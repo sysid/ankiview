@@ -3,9 +3,9 @@ pub mod application;
 pub mod cli;
 pub mod domain;
 pub mod infrastructure;
+pub mod inka;
 pub mod ports;
 pub mod util;
-pub mod inka;
 
 use crate::cli::args::{Args, Command};
 use anyhow::{Context, Result};
@@ -34,7 +34,12 @@ pub fn run(args: Args) -> Result<()> {
         Command::View { note_id, json } => handle_view_command(note_id, json, collection_path),
         Command::Delete { note_id } => handle_delete_command(note_id, collection_path),
         Command::List { search } => handle_list_command(search.as_deref(), collection_path),
-        Command::Collect { path, recursive } => handle_collect_command(path, recursive, collection_path),
+        Command::Collect {
+            path,
+            recursive,
+            force,
+            ignore_errors,
+        } => handle_collect_command(path, recursive, force, ignore_errors, collection_path),
     }
 }
 
@@ -115,13 +120,22 @@ fn handle_list_command(search_query: Option<&str>, collection_path: PathBuf) -> 
     Ok(())
 }
 
-fn handle_collect_command(path: PathBuf, recursive: bool, collection_path: PathBuf) -> Result<()> {
+fn handle_collect_command(
+    path: PathBuf,
+    recursive: bool,
+    force: bool,
+    ignore_errors: bool,
+    collection_path: PathBuf,
+) -> Result<()> {
     use crate::inka::application::card_collector::CardCollector;
 
-    info!(?path, recursive, "Collecting markdown cards");
+    info!(
+        ?path,
+        recursive, force, ignore_errors, "Collecting markdown cards"
+    );
 
-    // Initialize collector
-    let mut collector = CardCollector::new(&collection_path)?;
+    // Initialize collector with force flag
+    let mut collector = CardCollector::new(&collection_path, force)?;
 
     // Process based on path type
     let total_cards = if path.is_file() {
@@ -137,7 +151,9 @@ fn handle_collect_command(path: PathBuf, recursive: bool, collection_path: PathB
             for entry in std::fs::read_dir(&path)? {
                 let entry = entry?;
                 let entry_path = entry.path();
-                if entry_path.is_file() && entry_path.extension().and_then(|s| s.to_str()) == Some("md") {
+                if entry_path.is_file()
+                    && entry_path.extension().and_then(|s| s.to_str()) == Some("md")
+                {
                     count += collector.process_file(&entry_path)?;
                 }
             }

@@ -1,21 +1,22 @@
-use anyhow::{Context, Result};
-use std::path::{Path, PathBuf};
 use crate::infrastructure::anki::AnkiRepository;
-use crate::inka::infrastructure::markdown::section_parser;
+use crate::inka::infrastructure::file_writer;
 use crate::inka::infrastructure::markdown::card_parser;
 use crate::inka::infrastructure::markdown::converter;
-use crate::inka::infrastructure::file_writer;
+use crate::inka::infrastructure::markdown::section_parser;
+use anyhow::{Context, Result};
+use std::path::{Path, PathBuf};
 
 /// Main use case for collecting markdown cards into Anki
 pub struct CardCollector {
     _collection_path: PathBuf,
     _media_dir: PathBuf,
     repository: AnkiRepository,
+    _force: bool,
 }
 
 impl CardCollector {
     /// Create a new CardCollector with Anki collection path
-    pub fn new(collection_path: impl AsRef<Path>) -> Result<Self> {
+    pub fn new(collection_path: impl AsRef<Path>, force: bool) -> Result<Self> {
         let collection_path = collection_path.as_ref().to_path_buf();
 
         // Determine media directory path
@@ -26,8 +27,7 @@ impl CardCollector {
 
         // Create media directory if it doesn't exist
         if !media_dir.exists() {
-            std::fs::create_dir_all(&media_dir)
-                .context("Failed to create media directory")?;
+            std::fs::create_dir_all(&media_dir).context("Failed to create media directory")?;
         }
 
         // Open repository
@@ -37,6 +37,7 @@ impl CardCollector {
             _collection_path: collection_path,
             _media_dir: media_dir,
             repository,
+            _force: force,
         })
     }
 
@@ -63,8 +64,8 @@ impl CardCollector {
 
         for section in &sections {
             // Extract metadata
-            let deck_name = section_parser::extract_deck_name(section)
-                .unwrap_or_else(|| "Default".to_string());
+            let deck_name =
+                section_parser::extract_deck_name(section).unwrap_or_else(|| "Default".to_string());
             let tags = section_parser::extract_tags(section);
 
             // Extract note strings
@@ -101,7 +102,6 @@ impl CardCollector {
                     };
 
                     card_count += 1;
-
                 } else if card_parser::is_cloze_card(&note_str) {
                     // Parse cloze card
                     let text_md = card_parser::parse_cloze_card_field(&note_str)?;
@@ -118,11 +118,9 @@ impl CardCollector {
                         self.repository.update_note(id, &[text_html])?;
                     } else {
                         // Create new note
-                        let id = self.repository.create_cloze_note(
-                            &text_html,
-                            &deck_name,
-                            &tags,
-                        )?;
+                        let id = self
+                            .repository
+                            .create_cloze_note(&text_html, &deck_name, &tags)?;
 
                         // Inject ID back into markdown
                         content = file_writer::inject_anki_id(&content, &note_str, id);
@@ -203,7 +201,7 @@ Deck: TestDeck
 ---"#;
         fs::write(&markdown_path, markdown_content).unwrap();
 
-        let mut collector = CardCollector::new(&collection_path).unwrap();
+        let mut collector = CardCollector::new(&collection_path, false).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 1);
@@ -221,7 +219,7 @@ Deck: TestDeck
 ---"#;
         fs::write(&markdown_path, markdown_content).unwrap();
 
-        let mut collector = CardCollector::new(&collection_path).unwrap();
+        let mut collector = CardCollector::new(&collection_path, false).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 1);
@@ -245,7 +243,7 @@ Deck: TestDeck
 ---"#;
         fs::write(&markdown_path, markdown_content).unwrap();
 
-        let mut collector = CardCollector::new(&collection_path).unwrap();
+        let mut collector = CardCollector::new(&collection_path, false).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 3);
@@ -264,7 +262,7 @@ Deck: TestDeck
 ---"#;
         fs::write(&markdown_path, markdown_content).unwrap();
 
-        let mut collector = CardCollector::new(&collection_path).unwrap();
+        let mut collector = CardCollector::new(&collection_path, false).unwrap();
 
         // First run creates note
         let count1 = collector.process_file(&markdown_path).unwrap();
@@ -277,7 +275,7 @@ Deck: TestDeck
         // Modify the answer
         let modified = updated_content.replace(
             "A systems programming language",
-            "A safe systems programming language"
+            "A safe systems programming language",
         );
         fs::write(&markdown_path, &modified).unwrap();
 
@@ -293,7 +291,7 @@ Deck: TestDeck
         let markdown_path = temp_dir.path().join("empty.md");
         fs::write(&markdown_path, "Just text, no sections").unwrap();
 
-        let mut collector = CardCollector::new(&collection_path).unwrap();
+        let mut collector = CardCollector::new(&collection_path, false).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 0);
@@ -312,27 +310,35 @@ Deck: TestDeck
 
         // File 1 in root notes dir
         let file1 = notes_dir.join("file1.md");
-        fs::write(&file1, r#"---
+        fs::write(
+            &file1,
+            r#"---
 Deck: Test
 
 1. Question 1?
 > Answer 1
----"#).unwrap();
+---"#,
+        )
+        .unwrap();
 
         // File 2 in subdirectory
         let file2 = subdir.join("file2.md");
-        fs::write(&file2, r#"---
+        fs::write(
+            &file2,
+            r#"---
 Deck: Test
 
 1. Question 2?
 > Answer 2
----"#).unwrap();
+---"#,
+        )
+        .unwrap();
 
         // Non-markdown file (should be ignored)
         let txt_file = notes_dir.join("readme.txt");
         fs::write(&txt_file, "This is not markdown").unwrap();
 
-        let mut collector = CardCollector::new(&collection_path).unwrap();
+        let mut collector = CardCollector::new(&collection_path, false).unwrap();
         let count = collector.process_directory(&notes_dir).unwrap();
 
         // Should process both markdown files

@@ -1,27 +1,21 @@
-use regex::Regex;
 use lazy_static::lazy_static;
+use regex::Regex;
 
 lazy_static! {
-    static ref ANKI_CLOZE_REGEX: Regex = Regex::new(r"\{\{c\d+::[\s\S]*?\}\}")
-        .expect("Failed to compile Anki cloze regex");
-
+    static ref ANKI_CLOZE_REGEX: Regex =
+        Regex::new(r"\{\{c\d+::[\s\S]*?\}\}").expect("Failed to compile Anki cloze regex");
     static ref EXPLICIT_SHORT_CLOZE_REGEX: Regex = Regex::new(r"\{c?(\d+)::([\s\S]*?)\}")
         .expect("Failed to compile explicit short cloze regex");
-
-    static ref IMPLICIT_SHORT_CLOZE_REGEX: Regex = Regex::new(r"\{([\s\S]*?)\}")
-        .expect("Failed to compile implicit short cloze regex");
-
-    static ref CODE_BLOCK_REGEX: Regex = Regex::new(r"```[\s\S]+?```")
-        .expect("Failed to compile code block regex");
-
-    static ref INLINE_CODE_REGEX: Regex = Regex::new(r"`[\S\s]+?`")
-        .expect("Failed to compile inline code regex");
-
-    static ref BLOCK_MATH_REGEX: Regex = Regex::new(r"\$\$[\s\S]+?\$\$")
-        .expect("Failed to compile block math regex");
-
-    static ref INLINE_MATH_REGEX: Regex = Regex::new(r"\$[^\s$][^$]*?\$")
-        .expect("Failed to compile inline math regex");
+    static ref IMPLICIT_SHORT_CLOZE_REGEX: Regex =
+        Regex::new(r"\{([\s\S]*?)\}").expect("Failed to compile implicit short cloze regex");
+    static ref CODE_BLOCK_REGEX: Regex =
+        Regex::new(r"```[\s\S]+?```").expect("Failed to compile code block regex");
+    static ref INLINE_CODE_REGEX: Regex =
+        Regex::new(r"`[\S\s]+?`").expect("Failed to compile inline code regex");
+    static ref BLOCK_MATH_REGEX: Regex =
+        Regex::new(r"\$\$[\s\S]+?\$\$").expect("Failed to compile block math regex");
+    static ref INLINE_MATH_REGEX: Regex =
+        Regex::new(r"\$[^\s$][^$]*?\$").expect("Failed to compile inline math regex");
 }
 
 pub fn is_anki_cloze(text: &str) -> bool {
@@ -115,13 +109,17 @@ fn protect_code_blocks(text: &str) -> (String, Vec<String>) {
     for mat in CODE_BLOCK_REGEX.find_iter(text) {
         blocks.push(mat.as_str().to_string());
     }
-    result = CODE_BLOCK_REGEX.replace_all(&result, "___CODE_BLOCK___").to_string();
+    result = CODE_BLOCK_REGEX
+        .replace_all(&result, "___CODE_BLOCK___")
+        .to_string();
 
     // Inline code
     for mat in INLINE_CODE_REGEX.find_iter(&result) {
         blocks.push(mat.as_str().to_string());
     }
-    result = INLINE_CODE_REGEX.replace_all(&result, "___INLINE_CODE___").to_string();
+    result = INLINE_CODE_REGEX
+        .replace_all(&result, "___INLINE_CODE___")
+        .to_string();
 
     (result, blocks)
 }
@@ -134,13 +132,17 @@ fn protect_math_blocks(text: &str) -> (String, Vec<String>) {
     for mat in BLOCK_MATH_REGEX.find_iter(text) {
         blocks.push(mat.as_str().to_string());
     }
-    result = BLOCK_MATH_REGEX.replace_all(&result, "___MATH_BLOCK___").to_string();
+    result = BLOCK_MATH_REGEX
+        .replace_all(&result, "___MATH_BLOCK___")
+        .to_string();
 
     // Inline math - now the $$ are already protected
     for mat in INLINE_MATH_REGEX.find_iter(&result) {
         blocks.push(mat.as_str().to_string());
     }
-    result = INLINE_MATH_REGEX.replace_all(&result, "___INLINE_MATH___").to_string();
+    result = INLINE_MATH_REGEX
+        .replace_all(&result, "___INLINE_MATH___")
+        .to_string();
 
     (result, blocks)
 }
@@ -202,7 +204,10 @@ mod tests {
         let input = "First {one} then {two} finally {three}";
         let output = convert_cloze_syntax(input);
 
-        assert_eq!(output, "First {{c1::one}} then {{c2::two}} finally {{c3::three}}");
+        assert_eq!(
+            output,
+            "First {{c1::one}} then {{c2::two}} finally {{c3::three}}"
+        );
     }
 
     #[test]
@@ -227,6 +232,9 @@ mod tests {
         let input = "Equation {answer} is $$x^{2}$$ and inline $y^{3}$";
         let output = convert_cloze_syntax(input);
 
-        assert_eq!(output, "Equation {{c1::answer}} is $$x^{2}$$ and inline $y^{3}$");
+        assert_eq!(
+            output,
+            "Equation {{c1::answer}} is $$x^{2}$$ and inline $y^{3}$"
+        );
     }
 }
