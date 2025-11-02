@@ -17,11 +17,17 @@ pub struct CardCollector {
     repository: AnkiRepository,
     force: bool,
     hash_cache: Option<HashCache>,
+    update_ids: bool,
 }
 
 impl CardCollector {
     /// Create a new CardCollector with Anki collection path
-    pub fn new(collection_path: impl AsRef<Path>, force: bool, full_sync: bool) -> Result<Self> {
+    pub fn new(
+        collection_path: impl AsRef<Path>,
+        force: bool,
+        full_sync: bool,
+        update_ids: bool,
+    ) -> Result<Self> {
         let collection_path = collection_path.as_ref().to_path_buf();
 
         // Determine media directory path
@@ -57,6 +63,7 @@ impl CardCollector {
             repository,
             force,
             hash_cache,
+            update_ids,
         })
     }
 
@@ -153,9 +160,32 @@ impl CardCollector {
                     // Create or update note
                     if let Some(id) = existing_id {
                         // Update existing note
-                        self.repository.update_note(id, &[front_html, back_html])?;
+                        self.repository
+                            .update_note(id, &[front_html.clone(), back_html.clone()])?;
+                    } else if self.update_ids {
+                        // --update-ids mode: search for existing note by HTML content
+                        let matching_ids = self
+                            .repository
+                            .search_by_html(&[front_html.clone(), back_html.clone()])?;
+
+                        if let Some(&id) = matching_ids.first() {
+                            // Found existing note, inject ID
+                            debug!(note_id = id, "Found existing note for card, injecting ID");
+                            content = file_writer::inject_anki_id(&content, &note_str, id);
+                            // Update the existing note with current content
+                            self.repository.update_note(id, &[front_html, back_html])?;
+                        } else {
+                            // No match found, create new note
+                            let id = self.repository.create_basic_note(
+                                &front_html,
+                                &back_html,
+                                &deck_name,
+                                &tags,
+                            )?;
+                            content = file_writer::inject_anki_id(&content, &note_str, id);
+                        }
                     } else {
-                        // Create new note
+                        // Normal mode: create new note
                         let id = self.repository.create_basic_note(
                             &front_html,
                             &back_html,
@@ -185,9 +215,29 @@ impl CardCollector {
                     // Create or update note
                     if let Some(id) = existing_id {
                         // Update existing note
-                        self.repository.update_note(id, &[text_html])?;
+                        self.repository.update_note(id, &[text_html.clone()])?;
+                    } else if self.update_ids {
+                        // --update-ids mode: search for existing note by HTML content
+                        let matching_ids = self.repository.search_by_html(&[text_html.clone()])?;
+
+                        if let Some(&id) = matching_ids.first() {
+                            // Found existing note, inject ID
+                            debug!(
+                                note_id = id,
+                                "Found existing note for cloze card, injecting ID"
+                            );
+                            content = file_writer::inject_anki_id(&content, &note_str, id);
+                            // Update the existing note with current content
+                            self.repository.update_note(id, &[text_html])?;
+                        } else {
+                            // No match found, create new note
+                            let id = self
+                                .repository
+                                .create_cloze_note(&text_html, &deck_name, &tags)?;
+                            content = file_writer::inject_anki_id(&content, &note_str, id);
+                        }
                     } else {
-                        // Create new note
+                        // Normal mode: create new note
                         let id = self
                             .repository
                             .create_cloze_note(&text_html, &deck_name, &tags)?;
@@ -290,7 +340,7 @@ Deck: TestDeck
 ---"#;
         fs::write(&markdown_path, markdown_content).unwrap();
 
-        let mut collector = CardCollector::new(&collection_path, false, false).unwrap();
+        let mut collector = CardCollector::new(&collection_path, false, false, false).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 1);
@@ -308,7 +358,7 @@ Deck: TestDeck
 ---"#;
         fs::write(&markdown_path, markdown_content).unwrap();
 
-        let mut collector = CardCollector::new(&collection_path, false, false).unwrap();
+        let mut collector = CardCollector::new(&collection_path, false, false, false).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 1);
@@ -332,7 +382,7 @@ Deck: TestDeck
 ---"#;
         fs::write(&markdown_path, markdown_content).unwrap();
 
-        let mut collector = CardCollector::new(&collection_path, false, false).unwrap();
+        let mut collector = CardCollector::new(&collection_path, false, false, false).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 3);
@@ -351,7 +401,7 @@ Deck: TestDeck
 ---"#;
         fs::write(&markdown_path, markdown_content).unwrap();
 
-        let mut collector = CardCollector::new(&collection_path, false, false).unwrap();
+        let mut collector = CardCollector::new(&collection_path, false, false, false).unwrap();
 
         // First run creates note
         let count1 = collector.process_file(&markdown_path).unwrap();
@@ -380,7 +430,7 @@ Deck: TestDeck
         let markdown_path = temp_dir.path().join("empty.md");
         fs::write(&markdown_path, "Just text, no sections").unwrap();
 
-        let mut collector = CardCollector::new(&collection_path, false, false).unwrap();
+        let mut collector = CardCollector::new(&collection_path, false, false, false).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 0);
@@ -427,7 +477,7 @@ Deck: Test
         let txt_file = notes_dir.join("readme.txt");
         fs::write(&txt_file, "This is not markdown").unwrap();
 
-        let mut collector = CardCollector::new(&collection_path, false, false).unwrap();
+        let mut collector = CardCollector::new(&collection_path, false, false, false).unwrap();
         let count = collector.process_directory(&notes_dir).unwrap();
 
         // Should process both markdown files
@@ -456,7 +506,7 @@ Deck: TestDeck
         fs::write(&markdown_path, markdown_content).unwrap();
 
         // Process the file
-        let mut collector = CardCollector::new(&collection_path, false, false).unwrap();
+        let mut collector = CardCollector::new(&collection_path, false, false, false).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 1);

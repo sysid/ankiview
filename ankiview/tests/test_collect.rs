@@ -29,6 +29,7 @@ Deck: IntegrationTest
         &test_collection.collection_path,
         false,
         false,
+        false,
     )?;
     let count = collector.process_file(&markdown_path)?;
 
@@ -89,6 +90,7 @@ Deck: Integration
         &test_collection.collection_path,
         false,
         false,
+        false,
     )?;
     let count = collector.process_directory(&notes_dir)?;
 
@@ -124,6 +126,7 @@ Deck: UpdateTest
     // First collection run
     let mut collector = ankiview::inka::application::card_collector::CardCollector::new(
         &test_collection.collection_path,
+        false,
         false,
         false,
     )?;
@@ -186,6 +189,7 @@ Tags: test integration
     let count = {
         let mut collector = ankiview::inka::application::card_collector::CardCollector::new(
             &test_collection.collection_path,
+            false,
             false,
             false,
         )?;

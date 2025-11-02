@@ -71,5 +71,9 @@ pub enum Command {
         /// Process files even if unchanged since last sync
         #[arg(short = 'f', long)]
         full_sync: bool,
+
+        /// Find and update missing/incorrect note IDs by searching Anki
+        #[arg(short = 'u', long)]
+        update_ids: bool,
     },
 }

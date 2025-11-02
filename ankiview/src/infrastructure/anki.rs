@@ -258,6 +258,48 @@ impl AnkiRepository {
 
         Ok(exists)
     }
+
+    /// Search for notes by HTML content (for --update-ids)
+    /// Returns a vector of note IDs that match the given HTML fields
+    pub fn search_by_html(&mut self, fields: &[String]) -> Result<Vec<i64>> {
+        use anki::search::SearchNode;
+
+        // Get all notes in the collection
+        let search_node = SearchNode::WholeCollection;
+        let note_ids = self
+            .collection
+            .search_notes_unordered(search_node)
+            .context("Failed to search notes")?;
+
+        let mut matching_ids = Vec::new();
+
+        // Check each note to see if its fields match
+        for note_id in note_ids {
+            if let Ok(Some(note)) = self.collection.storage.get_note(note_id) {
+                let note_fields: Vec<String> =
+                    note.fields().iter().map(|f| f.to_string()).collect();
+
+                // For basic cards, match front and back (first 2 fields)
+                // For cloze cards, match the text field (first field)
+                let matches = if fields.len() == 2 && note_fields.len() >= 2 {
+                    // Basic card: match both fields
+                    note_fields[0] == fields[0] && note_fields[1] == fields[1]
+                } else if fields.len() == 1 && !note_fields.is_empty() {
+                    // Cloze card: match first field
+                    note_fields[0] == fields[0]
+                } else {
+                    false
+                };
+
+                if matches {
+                    debug!(note_id = note_id.0, "Found matching note");
+                    matching_ids.push(note_id.0);
+                }
+            }
+        }
+
+        Ok(matching_ids)
+    }
 }
 
 impl NoteRepository for AnkiRepository {

@@ -40,12 +40,14 @@ pub fn run(args: Args) -> Result<()> {
             force,
             ignore_errors,
             full_sync,
+            update_ids,
         } => handle_collect_command(
             path,
             recursive,
             force,
             ignore_errors,
             full_sync,
+            update_ids,
             collection_path,
         ),
     }
@@ -134,17 +136,18 @@ fn handle_collect_command(
     force: bool,
     ignore_errors: bool,
     full_sync: bool,
+    update_ids: bool,
     collection_path: PathBuf,
 ) -> Result<()> {
     use crate::inka::application::card_collector::CardCollector;
 
     info!(
         ?path,
-        recursive, force, ignore_errors, full_sync, "Collecting markdown cards"
+        recursive, force, ignore_errors, full_sync, update_ids, "Collecting markdown cards"
     );
 
-    // Initialize collector with force and full_sync flags
-    let mut collector = CardCollector::new(&collection_path, force, full_sync)?;
+    // Initialize collector with force, full_sync, and update_ids flags
+    let mut collector = CardCollector::new(&collection_path, force, full_sync, update_ids)?;
 
     // Process based on path type
     let total_cards = if path.is_file() {
