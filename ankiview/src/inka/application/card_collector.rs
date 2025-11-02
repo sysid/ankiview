@@ -18,6 +18,8 @@ pub struct CardCollector {
     force: bool,
     hash_cache: Option<HashCache>,
     update_ids: bool,
+    ignore_errors: bool,
+    errors: Vec<String>,
 }
 
 impl CardCollector {
@@ -27,6 +29,7 @@ impl CardCollector {
         force: bool,
         full_sync: bool,
         update_ids: bool,
+        ignore_errors: bool,
     ) -> Result<Self> {
         let collection_path = collection_path.as_ref().to_path_buf();
 
@@ -64,7 +67,14 @@ impl CardCollector {
             force,
             hash_cache,
             update_ids,
+            ignore_errors,
+            errors: Vec::new(),
         })
+    }
+
+    /// Get accumulated errors from processing
+    pub fn errors(&self) -> &[String] {
+        &self.errors
     }
 
     /// Process a single markdown file and add/update cards in Anki
@@ -72,6 +82,24 @@ impl CardCollector {
     pub fn process_file(&mut self, markdown_path: impl AsRef<Path>) -> Result<usize> {
         let markdown_path = markdown_path.as_ref();
 
+        // Handle error according to ignore_errors flag
+        match self.process_file_impl(markdown_path) {
+            Ok(count) => Ok(count),
+            Err(e) => {
+                if self.ignore_errors {
+                    // Collect error and continue
+                    let error_msg = format!("{}: {:#}", markdown_path.display(), e);
+                    self.errors.push(error_msg);
+                    Ok(0)
+                } else {
+                    Err(e)
+                }
+            }
+        }
+    }
+
+    /// Internal implementation of process_file
+    fn process_file_impl(&mut self, markdown_path: &Path) -> Result<usize> {
         // Check if file has changed (skip if unchanged and cache exists)
         if let Some(cache) = &self.hash_cache {
             let has_changed = cache
@@ -340,7 +368,8 @@ Deck: TestDeck
 ---"#;
         fs::write(&markdown_path, markdown_content).unwrap();
 
-        let mut collector = CardCollector::new(&collection_path, false, false, false).unwrap();
+        let mut collector =
+            CardCollector::new(&collection_path, false, false, false, false).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 1);
@@ -358,7 +387,8 @@ Deck: TestDeck
 ---"#;
         fs::write(&markdown_path, markdown_content).unwrap();
 
-        let mut collector = CardCollector::new(&collection_path, false, false, false).unwrap();
+        let mut collector =
+            CardCollector::new(&collection_path, false, false, false, false).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 1);
@@ -382,7 +412,8 @@ Deck: TestDeck
 ---"#;
         fs::write(&markdown_path, markdown_content).unwrap();
 
-        let mut collector = CardCollector::new(&collection_path, false, false, false).unwrap();
+        let mut collector =
+            CardCollector::new(&collection_path, false, false, false, false).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 3);
@@ -401,7 +432,8 @@ Deck: TestDeck
 ---"#;
         fs::write(&markdown_path, markdown_content).unwrap();
 
-        let mut collector = CardCollector::new(&collection_path, false, false, false).unwrap();
+        let mut collector =
+            CardCollector::new(&collection_path, false, false, false, false).unwrap();
 
         // First run creates note
         let count1 = collector.process_file(&markdown_path).unwrap();
@@ -430,7 +462,8 @@ Deck: TestDeck
         let markdown_path = temp_dir.path().join("empty.md");
         fs::write(&markdown_path, "Just text, no sections").unwrap();
 
-        let mut collector = CardCollector::new(&collection_path, false, false, false).unwrap();
+        let mut collector =
+            CardCollector::new(&collection_path, false, false, false, false).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 0);
@@ -477,11 +510,70 @@ Deck: Test
         let txt_file = notes_dir.join("readme.txt");
         fs::write(&txt_file, "This is not markdown").unwrap();
 
-        let mut collector = CardCollector::new(&collection_path, false, false, false).unwrap();
+        let mut collector =
+            CardCollector::new(&collection_path, false, false, false, false).unwrap();
         let count = collector.process_directory(&notes_dir).unwrap();
 
         // Should process both markdown files
         assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn given_ignore_errors_when_processing_file_with_missing_media_then_collects_error() {
+        let (temp_dir, collection_path, _media_dir) = create_test_collection();
+
+        // Create markdown with reference to non-existent image
+        let markdown_path = temp_dir.path().join("missing_media.md");
+        let markdown_content = r#"---
+Deck: TestDeck
+
+1. What is this image?
+> ![missing image](images/nonexistent.png)
+---"#;
+        fs::write(&markdown_path, markdown_content).unwrap();
+
+        // Process with ignore_errors = true
+        let mut collector =
+            CardCollector::new(&collection_path, false, false, false, true).unwrap();
+        let count = collector.process_file(&markdown_path).unwrap();
+
+        // Should return 0 cards since processing failed
+        assert_eq!(count, 0);
+
+        // Should have collected the error
+        let errors = collector.errors();
+        assert_eq!(errors.len(), 1, "Should have 1 error");
+        assert!(
+            errors[0].contains("missing_media.md"),
+            "Error message should mention the file"
+        );
+    }
+
+    #[test]
+    fn given_no_ignore_errors_when_processing_file_with_missing_media_then_returns_error() {
+        let (temp_dir, collection_path, _media_dir) = create_test_collection();
+
+        // Create markdown with reference to non-existent image
+        let markdown_path = temp_dir.path().join("missing_media.md");
+        let markdown_content = r#"---
+Deck: TestDeck
+
+1. What is this image?
+> ![missing image](images/nonexistent.png)
+---"#;
+        fs::write(&markdown_path, markdown_content).unwrap();
+
+        // Process with ignore_errors = false
+        let mut collector =
+            CardCollector::new(&collection_path, false, false, false, false).unwrap();
+        let result = collector.process_file(&markdown_path);
+
+        // Should return an error
+        assert!(result.is_err(), "Should return an error");
+
+        // Should not have collected any errors (since we returned immediately)
+        let errors = collector.errors();
+        assert_eq!(errors.len(), 0, "Should have 0 collected errors");
     }
 
     #[test]
@@ -506,7 +598,8 @@ Deck: TestDeck
         fs::write(&markdown_path, markdown_content).unwrap();
 
         // Process the file
-        let mut collector = CardCollector::new(&collection_path, false, false, false).unwrap();
+        let mut collector =
+            CardCollector::new(&collection_path, false, false, false, false).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 1);

@@ -146,8 +146,14 @@ fn handle_collect_command(
         recursive, force, ignore_errors, full_sync, update_ids, "Collecting markdown cards"
     );
 
-    // Initialize collector with force, full_sync, and update_ids flags
-    let mut collector = CardCollector::new(&collection_path, force, full_sync, update_ids)?;
+    // Initialize collector with force, full_sync, update_ids, and ignore_errors flags
+    let mut collector = CardCollector::new(
+        &collection_path,
+        force,
+        full_sync,
+        update_ids,
+        ignore_errors,
+    )?;
 
     // Process based on path type
     let total_cards = if path.is_file() {
@@ -181,6 +187,19 @@ fn handle_collect_command(
         total_cards,
         if total_cards == 1 { "" } else { "s" }
     );
+
+    // Print error summary if there were any errors
+    let errors = collector.errors();
+    if !errors.is_empty() {
+        eprintln!(
+            "\n{} error{} occurred:",
+            errors.len(),
+            if errors.len() == 1 { "" } else { "s" }
+        );
+        for error in errors {
+            eprintln!("  {}", error);
+        }
+    }
 
     Ok(())
 }
