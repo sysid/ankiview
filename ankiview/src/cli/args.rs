@@ -67,5 +67,9 @@ pub enum Command {
         /// Continue processing on errors without pausing
         #[arg(short, long)]
         ignore_errors: bool,
+
+        /// Process files even if unchanged since last sync
+        #[arg(short = 'f', long)]
+        full_sync: bool,
     },
 }

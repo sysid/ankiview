@@ -1,5 +1,6 @@
 use crate::infrastructure::anki::AnkiRepository;
 use crate::inka::infrastructure::file_writer;
+use crate::inka::infrastructure::hasher::HashCache;
 use crate::inka::infrastructure::markdown::card_parser;
 use crate::inka::infrastructure::markdown::converter;
 use crate::inka::infrastructure::markdown::section_parser;
@@ -15,11 +16,12 @@ pub struct CardCollector {
     media_dir: PathBuf,
     repository: AnkiRepository,
     force: bool,
+    hash_cache: Option<HashCache>,
 }
 
 impl CardCollector {
     /// Create a new CardCollector with Anki collection path
-    pub fn new(collection_path: impl AsRef<Path>, force: bool) -> Result<Self> {
+    pub fn new(collection_path: impl AsRef<Path>, force: bool, full_sync: bool) -> Result<Self> {
         let collection_path = collection_path.as_ref().to_path_buf();
 
         // Determine media directory path
@@ -33,6 +35,19 @@ impl CardCollector {
             std::fs::create_dir_all(&media_dir).context("Failed to create media directory")?;
         }
 
+        // Determine hash cache path (in same directory as collection)
+        let cache_path = collection_path
+            .parent()
+            .expect("Invalid collection path")
+            .join("ankiview_hashes.json");
+
+        // Load hash cache unless full_sync is enabled
+        let hash_cache = if full_sync {
+            None
+        } else {
+            Some(HashCache::load(&cache_path).context("Failed to load hash cache")?)
+        };
+
         // Open repository
         let repository = AnkiRepository::new(&collection_path)?;
 
@@ -41,6 +56,7 @@ impl CardCollector {
             media_dir,
             repository,
             force,
+            hash_cache,
         })
     }
 
@@ -48,6 +64,19 @@ impl CardCollector {
     /// Returns the number of cards processed
     pub fn process_file(&mut self, markdown_path: impl AsRef<Path>) -> Result<usize> {
         let markdown_path = markdown_path.as_ref();
+
+        // Check if file has changed (skip if unchanged and cache exists)
+        if let Some(cache) = &self.hash_cache {
+            let has_changed = cache
+                .file_has_changed(markdown_path)
+                .context("Failed to check file hash")?;
+
+            if !has_changed {
+                // File unchanged, skip processing
+                debug!(?markdown_path, "Skipping unchanged file");
+                return Ok(0);
+            }
+        }
 
         // Read markdown file
         let mut content = file_writer::read_markdown_file(markdown_path)?;
@@ -175,6 +204,13 @@ impl CardCollector {
         // Write updated content back to file if IDs were injected
         file_writer::write_markdown_file(markdown_path, &content)?;
 
+        // After successful processing, update hash cache
+        if let Some(cache) = &mut self.hash_cache {
+            cache
+                .update_hash(markdown_path)
+                .context("Failed to update file hash")?;
+        }
+
         Ok(card_count)
     }
 
@@ -204,6 +240,18 @@ impl CardCollector {
         }
 
         Ok(total_count)
+    }
+}
+
+impl Drop for CardCollector {
+    fn drop(&mut self) {
+        // Save hash cache if it exists
+        if let Some(cache) = &self.hash_cache {
+            if let Err(e) = cache.save() {
+                // Use eprintln since we can't return Result from Drop
+                eprintln!("Warning: Failed to save hash cache: {}", e);
+            }
+        }
     }
 }
 
@@ -242,7 +290,7 @@ Deck: TestDeck
 ---"#;
         fs::write(&markdown_path, markdown_content).unwrap();
 
-        let mut collector = CardCollector::new(&collection_path, false).unwrap();
+        let mut collector = CardCollector::new(&collection_path, false, false).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 1);
@@ -260,7 +308,7 @@ Deck: TestDeck
 ---"#;
         fs::write(&markdown_path, markdown_content).unwrap();
 
-        let mut collector = CardCollector::new(&collection_path, false).unwrap();
+        let mut collector = CardCollector::new(&collection_path, false, false).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 1);
@@ -284,7 +332,7 @@ Deck: TestDeck
 ---"#;
         fs::write(&markdown_path, markdown_content).unwrap();
 
-        let mut collector = CardCollector::new(&collection_path, false).unwrap();
+        let mut collector = CardCollector::new(&collection_path, false, false).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 3);
@@ -303,7 +351,7 @@ Deck: TestDeck
 ---"#;
         fs::write(&markdown_path, markdown_content).unwrap();
 
-        let mut collector = CardCollector::new(&collection_path, false).unwrap();
+        let mut collector = CardCollector::new(&collection_path, false, false).unwrap();
 
         // First run creates note
         let count1 = collector.process_file(&markdown_path).unwrap();
@@ -332,7 +380,7 @@ Deck: TestDeck
         let markdown_path = temp_dir.path().join("empty.md");
         fs::write(&markdown_path, "Just text, no sections").unwrap();
 
-        let mut collector = CardCollector::new(&collection_path, false).unwrap();
+        let mut collector = CardCollector::new(&collection_path, false, false).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 0);
@@ -379,7 +427,7 @@ Deck: Test
         let txt_file = notes_dir.join("readme.txt");
         fs::write(&txt_file, "This is not markdown").unwrap();
 
-        let mut collector = CardCollector::new(&collection_path, false).unwrap();
+        let mut collector = CardCollector::new(&collection_path, false, false).unwrap();
         let count = collector.process_directory(&notes_dir).unwrap();
 
         // Should process both markdown files
@@ -408,7 +456,7 @@ Deck: TestDeck
         fs::write(&markdown_path, markdown_content).unwrap();
 
         // Process the file
-        let mut collector = CardCollector::new(&collection_path, false).unwrap();
+        let mut collector = CardCollector::new(&collection_path, false, false).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 1);
