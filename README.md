@@ -4,8 +4,12 @@ AnkiView is a command-line tool that lets you quickly view Anki notes directly f
 
 ## Features ✨
 
-- View any note by its ID in your default browser
-- Delete notes from your collection via CLI
+- **View notes** - View any note by its ID in your default browser
+- **Delete notes** - Delete notes from your collection via CLI
+- **Import markdown** - Convert markdown flashcards to Anki notes
+- **Smart updates** - Automatically track cards with ID comments
+- **Media handling** - Import images from markdown files
+- **Hash caching** - Skip unchanged files for fast re-imports
 - Automatic collection file detection
 - Support for multiple Anki profiles
 - LaTeX math rendering support
@@ -69,6 +73,105 @@ ankiview -c /path/to/collection.anki2 delete 1234567890
 ankiview -p "User 1" delete 1234567890
 ```
 
+### Collect markdown cards
+
+Import markdown flashcards into your Anki collection:
+
+```bash
+# Import a single file
+ankiview collect notes.md
+
+# Import a directory (non-recursive)
+ankiview collect notes/
+
+# Import recursively (all subdirectories)
+ankiview collect -r notes/
+```
+
+**Markdown Format**
+
+Basic cards (question and answer):
+```markdown
+---
+Deck: Programming
+Tags: rust basics
+
+1. What is Rust?
+> A systems programming language
+
+2. What is Cargo?
+> Rust's package manager
+---
+```
+
+Cloze deletion cards:
+```markdown
+---
+Deck: Programming
+
+1. Rust provides {memory safety} without garbage collection.
+2. The {{c1::borrow checker}} ensures {{c2::safe concurrency}}.
+---
+```
+
+Cards with images:
+```markdown
+---
+Deck: ComputerScience
+
+1. What type of graph is this?
+> ![Graph diagram](images/dag.png)
+> A directed acyclic graph (DAG)
+---
+```
+
+**How It Works**
+
+1. AnkiView reads your markdown files
+2. Creates or updates notes in Anki
+3. Injects ID comments into your markdown for tracking
+4. Copies media files to Anki's collection.media/
+
+After the first run, your markdown will have ID comments:
+```markdown
+<!--ID:1686433857327-->
+1. What is Rust?
+> A systems programming language
+```
+
+This allows you to edit the content and re-run collect to update (not duplicate) the cards.
+
+**Advanced Usage**
+
+```bash
+# Recover lost IDs by searching Anki
+ankiview collect -u notes/
+
+# Force rebuild (bypass cache)
+ankiview collect -f notes/
+
+# Overwrite existing media files
+ankiview collect --force notes/
+
+# Continue on errors, report at end
+ankiview collect -i notes/
+
+# Combine flags for batch processing
+ankiview collect -ri notes/
+```
+
+**Flag Reference**
+
+| Flag | Description |
+|------|-------------|
+| `-r, --recursive` | Process subdirectories |
+| `--force` | Overwrite conflicting media files |
+| `-i, --ignore-errors` | Continue processing on errors |
+| `-f, --full-sync` | Bypass hash cache (force rebuild) |
+| `-u, --update-ids` | Search Anki for existing notes by content |
+
+**Performance Note:** AnkiView maintains a hash cache to skip unchanged files. Use `-f` to force processing all files.
+
 ### Debug logging
 
 Enable debug logging for any command (global flags can appear before or after subcommand):
@@ -129,8 +232,23 @@ RUST_LOG=debug cargo test
    - Verify the collection path
 
 2. **"Failed to open Anki collection"**
-   - Make sure Anki isn't running
+   - Make sure Anki isn't running (required for all commands)
    - Check file permissions
+
+3. **"Different file with the same name already exists"** (collect command)
+   - Media file conflict detected
+   - Use `--force` flag to overwrite existing media files
+   - Or rename your image file to avoid conflict
+
+4. **Duplicate cards created** (collect command)
+   - Ensure ID comments (`<!--ID:-->`) are preserved in markdown
+   - Use `--update-ids` flag to recover lost IDs
+   - Check that you didn't manually modify or remove ID comments
+
+5. **Cards not updating** (collect command)
+   - File may be unchanged (check hash cache)
+   - Use `-f` flag to force rebuild
+   - Verify ID comments are correct and match Anki notes
 
 ## Contributing 🤝
 
