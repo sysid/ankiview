@@ -107,8 +107,20 @@ impl BlockRule for BlockMathScanner {
             let content = content_lines.join("\n");
 
             let node = Node::new(BlockMath { content });
-            // Return the closing $$ line - the parser will advance past it
-            return Some((node, end));
+            // Return the number of lines to consume (delta), not absolute line number.
+            // This includes the opening $$, all content lines, and the closing $$.
+            let lines_consumed = end - start_line + 1;
+
+            // Defensive check: ensure we don't return a value that would cause
+            // the parser to advance beyond the document bounds
+            debug_assert!(
+                start_line + lines_consumed <= state.line_max,
+                "BlockMathScanner: lines_consumed {} would advance beyond line_max {}",
+                lines_consumed,
+                state.line_max
+            );
+
+            return Some((node, lines_consumed));
         }
 
         None
@@ -168,5 +180,39 @@ More text."#;
 
         assert!(html.contains(r"\(a=b\)"));
         assert!(html.contains(r"\[\sum_{i=1}^n i = \frac{n(n+1)}{2}\]"));
+    }
+
+    #[test]
+    fn given_block_math_in_large_document_when_parsing_then_does_not_panic() {
+        // Reproduce the panic from geography.md: index out of bounds
+        // Create a document with 100+ lines and LaTeX block in the middle
+        let mut lines = Vec::new();
+
+        // Add 50 lines of regular content
+        for i in 1..=50 {
+            lines.push(format!("Line {} with some content", i));
+        }
+
+        // Add a LaTeX block math section
+        lines.push("$$".to_string());
+        lines.push(r"\int_0^1 x^2 dx = \frac{1}{3}".to_string());
+        lines.push("$$".to_string());
+
+        // Add 65 more lines to get past 115 total
+        for i in 51..=115 {
+            lines.push(format!("Line {} with more content", i));
+        }
+
+        let input = lines.join("\n");
+
+        let mut parser = MarkdownIt::new();
+        markdown_it::plugins::cmark::add(&mut parser);
+        add_mathjax_plugin(&mut parser);
+
+        // This should not panic with "index out of bounds"
+        let html = parser.parse(&input).render();
+
+        // Verify the math was rendered correctly
+        assert!(html.contains(r"\[\int_0^1 x^2 dx = \frac{1}{3}\]"));
     }
 }
