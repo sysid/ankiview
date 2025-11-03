@@ -187,3 +187,24 @@ fn given_collection_when_searching_nonexistent_term_then_returns_empty() -> Resu
     assert_eq!(notes.len(), 0);
     Ok(())
 }
+
+#[test]
+fn given_cloze_note_when_getting_note_then_returns_note_with_empty_back() -> Result<()> {
+    // Arrange
+    let test_collection = TestCollection::new()?;
+    let mut repo = test_collection.open_repository()?;
+
+    // Create a Cloze note (has only 1 field)
+    let cloze_text = "Rust is a {{c1::systems programming}} language";
+    let note_id = repo.create_cloze_note(cloze_text, "TestDeck", &[])?;
+
+    // Act
+    let note = repo.get_note(note_id)?;
+
+    // Assert
+    assert_eq!(note.id, note_id);
+    assert!(note.front.contains("systems programming"));
+    assert_eq!(note.back, ""); // Cloze notes have no back field
+    assert_eq!(note.model_name, "Inka Cloze"); // Model name from the infrastructure
+    Ok(())
+}

@@ -322,8 +322,8 @@ impl NoteRepository for AnkiRepository {
 
         Ok(Note {
             id: note.id.0,
-            front: fields[0].clone(),
-            back: fields[1].clone(),
+            front: fields.first().cloned().unwrap_or_default(),
+            back: fields.get(1).cloned().unwrap_or_default(),
             tags: note.tags.to_vec(),
             model_name: model.name.clone(),
         })
