@@ -1,6 +1,16 @@
 use anyhow::{Context, Result};
 use std::path::Path;
 
+/// Strip ID comment lines from note string
+/// Returns the note text without any <!--ID:...--> lines
+pub fn strip_id_comment(note_str: &str) -> String {
+    note_str
+        .lines()
+        .filter(|line| !line.trim().starts_with("<!--ID:"))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 /// Read markdown file content
 pub fn read_markdown_file(path: impl AsRef<Path>) -> Result<String> {
     std::fs::read_to_string(path.as_ref()).context("Failed to read markdown file")
@@ -36,6 +46,59 @@ pub fn inject_anki_id(content: &str, note_pattern: &str, anki_id: i64) -> String
 
     // No ID exists, inject one before the note pattern
     let id_comment = format!("<!--ID:{}-->\n", anki_id);
+    let mut result = String::with_capacity(content.len() + id_comment.len());
+    result.push_str(&content[..note_pos]);
+    result.push_str(&id_comment);
+    result.push_str(&content[note_pos..]);
+
+    result
+}
+
+/// Replace an existing Anki ID with a new one for a specific note
+/// If no ID exists before the note, injects a new one
+pub fn replace_anki_id(content: &str, note_pattern: &str, new_id: i64) -> String {
+    // Find the position of the note pattern
+    let Some(note_pos) = content.find(note_pattern) else {
+        // Pattern not found, return unchanged
+        return content.to_string();
+    };
+
+    // Check if there's already an ID before this note
+    let before_note = &content[..note_pos];
+
+    // Look for <!--ID: pattern in the last 100 chars before the note
+    // Use rfind to get the LAST occurrence (closest to the note)
+    let check_start = before_note.len().saturating_sub(100);
+    let check_region = &before_note[check_start..];
+
+    if let Some(id_start_rel) = check_region.rfind("<!--ID:") {
+        // Found an ID comment, extract it
+        let id_start = check_start + id_start_rel;
+
+        // Find the end of the ID comment
+        if let Some(id_end_rel) = check_region[id_start_rel..].find("-->") {
+            let id_end = check_start + id_start_rel + id_end_rel + 3; // +3 for "-->".len()
+
+            // Check if there's a newline right after the ID comment
+            let after_id_newline = if content[id_end..].starts_with('\n') {
+                1
+            } else {
+                0
+            };
+
+            // Replace the old ID comment with the new one, preserving newline
+            let new_id_comment = format!("<!--ID:{}-->\n", new_id);
+            let mut result = String::with_capacity(content.len());
+            result.push_str(&content[..id_start]);
+            result.push_str(&new_id_comment);
+            result.push_str(&content[id_end + after_id_newline..]);
+
+            return result;
+        }
+    }
+
+    // No ID exists, inject one before the note pattern (same as inject_anki_id)
+    let id_comment = format!("<!--ID:{}-->\n", new_id);
     let mut result = String::with_capacity(content.len() + id_comment.len());
     result.push_str(&content[..note_pos]);
     result.push_str(&id_comment);
@@ -209,5 +272,66 @@ Deck: Test
         let read_back = read_markdown_file(&file_path).unwrap();
 
         assert_eq!(read_back, original);
+    }
+
+    #[test]
+    fn given_note_with_existing_id_when_replacing_then_updates_id() {
+        let content = r#"---
+Deck: Test
+
+<!--ID:1111111111-->
+1. Question?
+> Answer!
+---"#;
+
+        let result = replace_anki_id(content, "1. Question?", 9999999999);
+
+        // Should have new ID
+        assert!(result.contains("<!--ID:9999999999-->"));
+        // Should NOT have old ID
+        assert!(!result.contains("<!--ID:1111111111-->"));
+        // Should have only one ID comment
+        assert_eq!(result.matches("<!--ID:").count(), 1);
+    }
+
+    #[test]
+    fn given_note_without_id_when_replacing_then_injects_id() {
+        let content = r#"---
+Deck: Test
+
+1. Question?
+> Answer!
+---"#;
+
+        let result = replace_anki_id(content, "1. Question?", 5555555555);
+
+        // Should have new ID
+        assert!(result.contains("<!--ID:5555555555-->"));
+        assert_eq!(result.matches("<!--ID:").count(), 1);
+    }
+
+    #[test]
+    fn given_multiple_notes_with_ids_when_replacing_then_targets_correct_note() {
+        let content = r#"---
+Deck: Test
+
+<!--ID:1111111111-->
+1. First question?
+> First answer
+
+<!--ID:2222222222-->
+2. Second question?
+> Second answer
+---"#;
+
+        let result = replace_anki_id(content, "2. Second question?", 9999999999);
+
+        // First ID should remain unchanged
+        assert!(result.contains("<!--ID:1111111111-->"));
+        // Second ID should be replaced
+        assert!(result.contains("<!--ID:9999999999-->"));
+        assert!(!result.contains("<!--ID:2222222222-->"));
+        // Should have exactly two ID comments
+        assert_eq!(result.matches("<!--ID:").count(), 2);
     }
 }

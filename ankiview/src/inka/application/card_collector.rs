@@ -8,7 +8,7 @@ use crate::inka::infrastructure::media_handler;
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use tracing::debug;
+use tracing::{debug, warn};
 
 /// Main use case for collecting markdown cards into Anki
 pub struct CardCollector {
@@ -199,9 +199,24 @@ impl CardCollector {
 
                     // Create or update note
                     if let Some(id) = existing_id {
-                        // Update existing note
-                        self.repository
-                            .update_note(id, &[front_html.clone(), back_html.clone()])?;
+                        // Check if note still exists before updating
+                        if self.repository.note_exists(id)? {
+                            // Update existing note
+                            self.repository
+                                .update_note(id, &[front_html.clone(), back_html.clone()])?;
+                        } else {
+                            // Note was deleted - create new note and replace ID
+                            warn!(old_id = id, "Note ID found in markdown but note doesn't exist in Anki, creating new note");
+                            let new_id = self.repository.create_basic_note(
+                                &front_html,
+                                &back_html,
+                                &deck_name,
+                                &tags,
+                            )?;
+                            // Strip ID comment from note_str before using as pattern
+                            let note_pattern = file_writer::strip_id_comment(&note_str);
+                            content = file_writer::replace_anki_id(&content, &note_pattern, new_id);
+                        }
                     } else if self.update_ids {
                         // --update-ids mode: search for existing note by HTML content
                         let matching_ids = self
@@ -257,8 +272,20 @@ impl CardCollector {
 
                     // Create or update note
                     if let Some(id) = existing_id {
-                        // Update existing note
-                        self.repository.update_note(id, &[text_html.clone()])?;
+                        // Check if note still exists before updating
+                        if self.repository.note_exists(id)? {
+                            // Update existing note
+                            self.repository.update_note(id, &[text_html.clone()])?;
+                        } else {
+                            // Note was deleted - create new note and replace ID
+                            warn!(old_id = id, "Note ID found in markdown but note doesn't exist in Anki, creating new note");
+                            let new_id = self
+                                .repository
+                                .create_cloze_note(&text_html, &deck_name, &tags)?;
+                            // Strip ID comment from note_str before using as pattern
+                            let note_pattern = file_writer::strip_id_comment(&note_str);
+                            content = file_writer::replace_anki_id(&content, &note_pattern, new_id);
+                        }
                     } else if self.update_ids {
                         // --update-ids mode: search for existing note by HTML content
                         let matching_ids = self.repository.search_by_html(&[text_html.clone()])?;
