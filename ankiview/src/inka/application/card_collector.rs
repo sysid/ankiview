@@ -125,8 +125,23 @@ impl CardCollector {
         // Read markdown file
         let mut content = file_writer::read_markdown_file(markdown_path)?;
 
-        // Extract and handle media files
-        let image_paths = media_handler::extract_image_paths(&content);
+        // Parse sections first to identify inka2 blocks
+        let parser = section_parser::SectionParser::new();
+        let sections = parser.parse(&content);
+
+        if sections.is_empty() {
+            return Ok(0);
+        }
+
+        // Concatenate all section content to extract media only from sections
+        let mut all_section_content = String::new();
+        for section in &sections {
+            all_section_content.push_str(section);
+            all_section_content.push('\n'); // Maintain separation between sections
+        }
+
+        // Extract and handle media files only from section content
+        let image_paths = media_handler::extract_image_paths(&all_section_content);
         let mut path_mapping = HashMap::new();
 
         for image_path in image_paths {
@@ -151,14 +166,6 @@ impl CardCollector {
                         .with_context(|| format!("Failed to copy media file '{}'", image_path));
                 }
             }
-        }
-
-        // Parse sections
-        let parser = section_parser::SectionParser::new();
-        let sections = parser.parse(&content);
-
-        if sections.is_empty() {
-            return Ok(0);
         }
 
         // Convert sections to owned Strings to avoid borrowing issues when mutating content
@@ -706,5 +713,54 @@ Deck: TestDeck
 
         assert!(result.starts_with("<p>Sample text</p>"));
         assert!(result.contains(r#"<p><span style="font-size: 9pt;">File: /tmp/test.md</span></p>"#));
+    }
+
+    #[test]
+    fn given_markdown_with_image_outside_section_when_processing_then_ignores_it() {
+        let (temp_dir, collection_path, media_dir) = create_test_collection();
+
+        // Create markdown with image OUTSIDE inka2 block
+        let markdown_path = temp_dir.path().join("outside_image.md");
+        let markdown_content = r#"# My Notes
+
+This is regular markdown content with an image.
+![Outside image](images/outside.png)
+
+---
+Deck: TestDeck
+
+1. What is this?
+> ![Inside image](images/inside.png)
+> An important diagram
+---"#;
+        fs::write(&markdown_path, markdown_content).unwrap();
+
+        // Create only the "inside" image - NOT the "outside" one
+        let images_dir = temp_dir.path().join("images");
+        fs::create_dir(&images_dir).unwrap();
+        let inside_image = images_dir.join("inside.png");
+        fs::write(&inside_image, b"inside image data").unwrap();
+
+        // NOTE: We deliberately DO NOT create "outside.png"
+
+        // Process the file - should succeed without error
+        let mut collector =
+            CardCollector::new(&collection_path, false, false, false, false).unwrap();
+        let count = collector.process_file(&markdown_path).unwrap();
+
+        assert_eq!(count, 1, "Should create one card");
+
+        // Verify ONLY the inside image was copied to media directory
+        let copied_inside = media_dir.join("inside.png");
+        assert!(
+            copied_inside.exists(),
+            "Inside image should be copied to media directory"
+        );
+
+        let copied_outside = media_dir.join("outside.png");
+        assert!(
+            !copied_outside.exists(),
+            "Outside image should NOT be copied to media directory"
+        );
     }
 }
