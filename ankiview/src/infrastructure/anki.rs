@@ -18,6 +18,11 @@ impl AnkiRepository {
         let path = PathBuf::from(collection_path.as_ref());
         debug!(?path, "Creating new AnkiRepository");
 
+        // FIRST: Check if Anki is running before attempting anything else
+        // This prevents database corruption from concurrent access
+        crate::util::process::check_anki_not_running()
+            .context("Cannot access collection while Anki is running")?;
+
         // Check if file exists
         if !path.exists() {
             return Err(DomainError::CollectionError(format!(
@@ -47,10 +52,17 @@ impl AnkiRepository {
             }
         }
 
-        // Try to open the collection with better error context
+        // Try to open the collection with improved error context
         let collection = CollectionBuilder::new(path.clone())
             .build()
-            .with_context(|| "Failed to open Anki collection. Is Anki currently running?")?;
+            .with_context(|| {
+                "Failed to open Anki collection.\n\n\
+                 Possible causes:\n\
+                 - Anki is running (please close it completely)\n\
+                 - Database is locked by another process\n\
+                 - Collection file is corrupted\n\n\
+                 If you just closed Anki, wait 5-10 seconds and try again."
+            })?;
 
         // Get media directory path
         let media_dir = path.parent().unwrap().join("collection.media");

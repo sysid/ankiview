@@ -219,7 +219,7 @@ dependencies = [
 
 [[package]]
 name = "ankiview"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "anki",
  "anyhow",
@@ -236,6 +236,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "sysinfo",
  "tempfile",
  "thiserror 2.0.17",
  "toml",
