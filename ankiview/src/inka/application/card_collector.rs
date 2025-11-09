@@ -255,7 +255,8 @@ impl CardCollector {
         }
 
         // Read markdown file
-        let mut content = file_writer::read_markdown_file(markdown_path)?;
+        let mut content = file_writer::read_markdown_file(markdown_path)
+            .with_context(|| format!("Failed to read markdown file: {}", markdown_path.display()))?;
 
         // Parse sections first to identify inka2 blocks
         let parser = section_parser::SectionParser::new();
@@ -321,7 +322,8 @@ impl CardCollector {
                 // Determine card type and process
                 if card_parser::is_basic_card(&note_str) {
                     // Parse basic card fields
-                    let (front_md, back_md) = card_parser::parse_basic_card_fields(&note_str)?;
+                    let (front_md, back_md) = card_parser::parse_basic_card_fields(&note_str)
+                        .context("Failed to parse basic card fields")?;
 
                     // Convert to HTML
                     let mut front_html = converter::markdown_to_html(&front_md);
@@ -350,7 +352,8 @@ impl CardCollector {
                     card_count += 1;
                 } else if card_parser::is_cloze_card(&note_str) {
                     // Parse cloze card
-                    let text_md = card_parser::parse_cloze_card_field(&note_str)?;
+                    let text_md = card_parser::parse_cloze_card_field(&note_str)
+                        .context("Failed to parse cloze card field")?;
 
                     // Transform cloze syntax
                     let text_transformed = crate::inka::infrastructure::markdown::cloze_converter::convert_cloze_syntax(&text_md);
@@ -382,7 +385,8 @@ impl CardCollector {
         }
 
         // Write updated content back to file if IDs were injected
-        file_writer::write_markdown_file(markdown_path, &content)?;
+        file_writer::write_markdown_file(markdown_path, &content)
+            .with_context(|| format!("Failed to write markdown file: {}", markdown_path.display()))?;
 
         // After successful processing, update hash cache
         if let Some(cache) = &mut self.hash_cache {
