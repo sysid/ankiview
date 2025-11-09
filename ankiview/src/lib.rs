@@ -44,16 +44,16 @@ pub fn run(args: Args) -> Result<()> {
             full_sync,
             update_ids,
             card_type,
-        } => handle_collect_command(
-            path,
-            recursive,
-            force,
-            ignore_errors,
-            full_sync,
-            update_ids,
-            card_type,
-            collection_path,
-        ),
+        } => {
+            let config = crate::inka::application::card_collector::CollectorConfig {
+                force,
+                full_sync,
+                update_ids,
+                ignore_errors,
+                card_type,
+            };
+            handle_collect_command(path, recursive, config, collection_path)
+        }
         Command::ListCardTypes => handle_list_card_types_command(collection_path),
     }
 }
@@ -145,7 +145,7 @@ fn handle_list_card_types_command(collection_path: PathBuf) -> Result<()> {
 
     // Print header
     println!("Available card types:");
-    println!("{:<15} {}", "ID", "Name");
+    println!("{:<15} Name", "ID");
     println!("{}", "-".repeat(60));
 
     // Format and print each notetype
@@ -159,28 +159,21 @@ fn handle_list_card_types_command(collection_path: PathBuf) -> Result<()> {
 fn handle_collect_command(
     path: PathBuf,
     recursive: bool,
-    force: bool,
-    ignore_errors: bool,
-    full_sync: bool,
-    update_ids: bool,
-    card_type: Option<String>,
+    config: crate::inka::application::card_collector::CollectorConfig,
     collection_path: PathBuf,
 ) -> Result<()> {
-    use crate::inka::application::card_collector::{CardCollector, CollectorConfig};
+    use crate::inka::application::card_collector::CardCollector;
 
     info!(
         ?path,
-        recursive, force, ignore_errors, full_sync, update_ids, ?card_type, "Collecting markdown cards"
+        recursive,
+        force = config.force,
+        ignore_errors = config.ignore_errors,
+        full_sync = config.full_sync,
+        update_ids = config.update_ids,
+        card_type = ?config.card_type,
+        "Collecting markdown cards"
     );
-
-    // Build configuration
-    let config = CollectorConfig {
-        force,
-        full_sync,
-        update_ids,
-        ignore_errors,
-        card_type,
-    };
 
     // Initialize collector
     let mut collector = CardCollector::new(&collection_path, config)?;
