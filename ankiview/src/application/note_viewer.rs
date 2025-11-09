@@ -13,6 +13,10 @@ pub trait NoteRepository {
     /// If search_query is None, returns all notes.
     /// If search_query is Some(query), returns notes matching the query.
     fn list_notes(&mut self, search_query: Option<&str>) -> Result<Vec<Note>, DomainError>;
+
+    /// List all available note types (models) in the collection
+    /// Returns a vector of (notetype_id, notetype_name) tuples
+    fn list_notetypes(&mut self) -> Result<Vec<(i64, String)>, DomainError>;
 }
 
 pub struct NoteViewer<R: NoteRepository> {

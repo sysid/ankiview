@@ -56,6 +56,10 @@ mod tests {
                     .collect(),
             })
         }
+
+        fn list_notetypes(&mut self) -> Result<Vec<(i64, String)>, DomainError> {
+            unimplemented!()
+        }
     }
 
     #[test]

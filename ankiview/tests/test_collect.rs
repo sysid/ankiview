@@ -32,6 +32,7 @@ Deck: IntegrationTest
         false,
         false,
         false,
+        None,
     )?;
     let count = collector.process_file(&markdown_path)?;
 
@@ -94,6 +95,7 @@ Deck: Integration
         false,
         false,
         false,
+        None,
     )?;
     let count = collector.process_directory(&notes_dir)?;
 
@@ -133,6 +135,7 @@ Deck: UpdateTest
         false,
         false,
         false,
+        None,
     )?;
     let count1 = collector.process_file(&markdown_path)?;
     assert_eq!(count1, 1);
@@ -197,6 +200,7 @@ Tags: test integration
             false,
             false,
             false,
+            None,
         )?;
         collector.process_file(&markdown_path)?
     }; // Collector dropped here, releasing the lock
@@ -263,6 +267,7 @@ Deck: OrphanTest
             false,
             false,
             false,
+            None,
         )?;
         collector.process_file(&markdown_path)?;
     } // Drop collector to release lock
@@ -297,6 +302,7 @@ Deck: OrphanTest
             true, // full_sync=true to bypass hash cache
             false,
             false,
+            None,
         )?;
         collector.process_file(&markdown_path)
     }; // Drop collector to release lock

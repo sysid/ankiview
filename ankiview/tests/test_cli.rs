@@ -243,3 +243,60 @@ fn given_list_command_with_global_flags_when_parsing_then_succeeds() {
     }
     assert_eq!(parsed.verbose, 1);
 }
+
+#[test]
+fn given_list_card_types_command_when_parsing_then_succeeds() {
+    // Arrange
+    let args = vec!["ankiview", "list-card-types"];
+
+    // Act
+    let parsed = Args::try_parse_from(args).unwrap();
+
+    // Assert
+    match parsed.command {
+        Command::ListCardTypes => {}
+        _ => panic!("Expected ListCardTypes command"),
+    }
+}
+
+#[test]
+fn given_collect_with_card_type_when_parsing_then_succeeds() {
+    // Arrange
+    let args = vec![
+        "ankiview",
+        "collect",
+        "--card-type",
+        "Inka Basic",
+        "notes.md",
+    ];
+
+    // Act
+    let parsed = Args::try_parse_from(args).unwrap();
+
+    // Assert
+    match parsed.command {
+        Command::Collect { path, card_type, .. } => {
+            assert_eq!(path, std::path::PathBuf::from("notes.md"));
+            assert_eq!(card_type, Some("Inka Basic".to_string()));
+        }
+        _ => panic!("Expected Collect command"),
+    }
+}
+
+#[test]
+fn given_collect_without_card_type_when_parsing_then_defaults_to_none() {
+    // Arrange
+    let args = vec!["ankiview", "collect", "notes.md"];
+
+    // Act
+    let parsed = Args::try_parse_from(args).unwrap();
+
+    // Assert
+    match parsed.command {
+        Command::Collect { path, card_type, .. } => {
+            assert_eq!(path, std::path::PathBuf::from("notes.md"));
+            assert_eq!(card_type, None);
+        }
+        _ => panic!("Expected Collect command"),
+    }
+}

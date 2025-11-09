@@ -88,5 +88,18 @@ pub enum Command {
         /// Matches notes by comparing HTML field content.
         #[arg(short = 'u', long)]
         update_ids: bool,
+
+        /// Card type (notetype) to use when creating notes.
+        /// Specify exact notetype name (e.g., "Basic", "Inka Basic").
+        /// Defaults to "Inka Basic" if not specified.
+        /// Use 'list-card-types' command to see available card types.
+        #[arg(long, value_name = "TYPE")]
+        card_type: Option<String>,
     },
+
+    /// List available card types (notetypes) in the collection
+    ///
+    /// Displays all available note types that can be used with the --card-type flag.
+    /// Each card type defines the fields and card templates for flashcards.
+    ListCardTypes,
 }

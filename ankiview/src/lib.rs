@@ -7,6 +7,7 @@ pub mod inka;
 pub mod ports;
 pub mod util;
 
+use crate::application::NoteRepository;
 use crate::cli::args::{Args, Command};
 use anyhow::{Context, Result};
 use infrastructure::AnkiRepository;
@@ -41,6 +42,7 @@ pub fn run(args: Args) -> Result<()> {
             ignore_errors,
             full_sync,
             update_ids,
+            card_type,
         } => handle_collect_command(
             path,
             recursive,
@@ -48,8 +50,10 @@ pub fn run(args: Args) -> Result<()> {
             ignore_errors,
             full_sync,
             update_ids,
+            card_type,
             collection_path,
         ),
+        Command::ListCardTypes => handle_list_card_types_command(collection_path),
     }
 }
 
@@ -130,6 +134,27 @@ fn handle_list_command(search_query: Option<&str>, collection_path: PathBuf) -> 
     Ok(())
 }
 
+fn handle_list_card_types_command(collection_path: PathBuf) -> Result<()> {
+    let mut repository = AnkiRepository::new(&collection_path)?;
+
+    // List all available notetypes
+    info!("Listing card types");
+    let notetypes = repository.list_notetypes()?;
+    debug!(count = notetypes.len(), "Retrieved notetypes");
+
+    // Print header
+    println!("Available card types:");
+    println!("{:<15} {}", "ID", "Name");
+    println!("{}", "-".repeat(60));
+
+    // Format and print each notetype
+    for (id, name) in notetypes {
+        println!("{:<15} {}", id, name);
+    }
+
+    Ok(())
+}
+
 fn handle_collect_command(
     path: PathBuf,
     recursive: bool,
@@ -137,22 +162,24 @@ fn handle_collect_command(
     ignore_errors: bool,
     full_sync: bool,
     update_ids: bool,
+    card_type: Option<String>,
     collection_path: PathBuf,
 ) -> Result<()> {
     use crate::inka::application::card_collector::CardCollector;
 
     info!(
         ?path,
-        recursive, force, ignore_errors, full_sync, update_ids, "Collecting markdown cards"
+        recursive, force, ignore_errors, full_sync, update_ids, ?card_type, "Collecting markdown cards"
     );
 
-    // Initialize collector with force, full_sync, update_ids, and ignore_errors flags
+    // Initialize collector with force, full_sync, update_ids, ignore_errors, and card_type
     let mut collector = CardCollector::new(
         &collection_path,
         force,
         full_sync,
         update_ids,
         ignore_errors,
+        card_type,
     )?;
 
     // Process based on path type

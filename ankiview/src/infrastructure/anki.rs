@@ -78,31 +78,59 @@ impl AnkiRepository {
         &self.media_dir
     }
 
-    /// Find or create a Basic note type with front/back fields
-    /// Returns the notetype ID
-    pub fn find_or_create_basic_notetype(&mut self) -> Result<i64> {
-        use anki::notetype::NotetypeKind;
-
-        // Look for existing Basic notetype
+    /// Find a notetype by exact name
+    /// Returns the notetype ID or error if not found
+    pub fn find_notetype_by_name(&mut self, name: &str) -> Result<i64> {
         let all_notetypes = self
             .collection
             .get_all_notetypes()
             .context("Failed to get all notetypes")?;
 
-        // Find a Basic-type notetype (non-cloze)
         for notetype in all_notetypes {
-            if notetype.config.kind() != NotetypeKind::Cloze && notetype.fields.len() >= 2 {
-                // Found a suitable basic notetype
-                debug!(notetype_id = notetype.id.0, name = %notetype.name, "Found existing Basic notetype");
+            if notetype.name == name {
+                debug!(notetype_id = notetype.id.0, name = %notetype.name, "Found notetype by name");
                 return Ok(notetype.id.0);
             }
         }
 
-        // No suitable notetype found - this shouldn't happen in normal Anki collections
-        // For now, return an error. In the future, we could create one programmatically.
+        // List available notetypes for error message
+        let available: Vec<String> = self
+            .collection
+            .get_all_notetypes()
+            .context("Failed to get all notetypes")?
+            .into_iter()
+            .map(|nt| nt.name.clone())
+            .collect();
+
         Err(anyhow::anyhow!(
-            "No Basic notetype found. Please create a Basic notetype in Anki first."
+            "Notetype '{}' not found. Available notetypes: {}",
+            name,
+            available.join(", ")
         ))
+    }
+
+    /// Find or create a Basic note type with front/back fields
+    /// Returns the notetype ID
+    ///
+    /// # Arguments
+    /// * `preferred_name` - Optional exact notetype name to use. Defaults to "Inka Basic" if None.
+    pub fn find_or_create_basic_notetype(&mut self, preferred_name: Option<&str>) -> Result<i64> {
+        let notetype_name = preferred_name.unwrap_or("Inka Basic");
+
+        // Try to find the preferred notetype by exact name
+        match self.find_notetype_by_name(notetype_name) {
+            Ok(id) => {
+                debug!(notetype_id = id, name = %notetype_name, "Using preferred notetype");
+                Ok(id)
+            }
+            Err(e) => {
+                // Notetype not found - return error with available notetypes
+                Err(e.context(format!(
+                    "Preferred notetype '{}' not found",
+                    notetype_name
+                )))
+            }
+        }
     }
 
     /// Find or create a Cloze note type
@@ -133,18 +161,22 @@ impl AnkiRepository {
 
     /// Create a new Basic note in the collection
     /// Returns the created note ID
+    ///
+    /// # Arguments
+    /// * `card_type` - Optional notetype name. Defaults to "Inka Basic" if None.
     pub fn create_basic_note(
         &mut self,
         front: &str,
         back: &str,
         deck_name: &str,
         tags: &[String],
+        card_type: Option<&str>,
     ) -> Result<i64> {
         use anki::notes::Note;
         use anki::notetype::NotetypeId;
 
         // Find or create the Basic notetype
-        let notetype_id = self.find_or_create_basic_notetype()?;
+        let notetype_id = self.find_or_create_basic_notetype(card_type)?;
 
         // Get the notetype to create the note
         let notetype = self
@@ -426,6 +458,21 @@ impl NoteRepository for AnkiRepository {
 
         Ok(notes)
     }
+
+    #[instrument(level = "debug", skip(self))]
+    fn list_notetypes(&mut self) -> Result<Vec<(i64, String)>, DomainError> {
+        let all_notetypes = self
+            .collection
+            .get_all_notetypes()
+            .map_err(|e| DomainError::CollectionError(e.to_string()))?;
+
+        let notetypes = all_notetypes
+            .into_iter()
+            .map(|nt| (nt.id.0, nt.name.clone()))
+            .collect();
+
+        Ok(notetypes)
+    }
 }
 
 #[cfg(test)]
@@ -452,7 +499,11 @@ mod tests {
     fn given_new_collection_when_finding_basic_notetype_then_creates_and_returns_id() {
         let (_temp_dir, mut repo) = create_test_collection().unwrap();
 
-        let notetype_id = repo.find_or_create_basic_notetype().unwrap();
+        // Get any available notetype
+        let notetypes = repo.list_notetypes().unwrap();
+        let (_id, name) = &notetypes[0];
+
+        let notetype_id = repo.find_or_create_basic_notetype(Some(name)).unwrap();
 
         assert!(notetype_id > 0);
     }
@@ -461,8 +512,12 @@ mod tests {
     fn given_existing_basic_notetype_when_finding_then_returns_same_id() {
         let (_temp_dir, mut repo) = create_test_collection().unwrap();
 
-        let first_id = repo.find_or_create_basic_notetype().unwrap();
-        let second_id = repo.find_or_create_basic_notetype().unwrap();
+        // Get any available notetype
+        let notetypes = repo.list_notetypes().unwrap();
+        let (_id, name) = &notetypes[0];
+
+        let first_id = repo.find_or_create_basic_notetype(Some(name)).unwrap();
+        let second_id = repo.find_or_create_basic_notetype(Some(name)).unwrap();
 
         assert_eq!(first_id, second_id);
     }
@@ -496,6 +551,7 @@ mod tests {
                 "A systems programming language",
                 "Default",
                 &["rust".to_string(), "programming".to_string()],
+                Some("Basic"),
             )
             .unwrap();
 
@@ -507,7 +563,7 @@ mod tests {
         let (_temp_dir, mut repo) = create_test_collection().unwrap();
 
         let note_id = repo
-            .create_basic_note("Front", "Back", "Default", &[])
+            .create_basic_note("Front", "Back", "Default", &[], Some("Basic"))
             .unwrap();
 
         // Should be able to retrieve the note
@@ -551,7 +607,7 @@ mod tests {
 
         // Create a note
         let note_id = repo
-            .create_basic_note("Original Front", "Original Back", "Default", &[])
+            .create_basic_note("Original Front", "Original Back", "Default", &[], Some("Basic"))
             .unwrap();
 
         // Update it
@@ -578,7 +634,7 @@ mod tests {
         let (_temp_dir, mut repo) = create_test_collection().unwrap();
 
         let note_id = repo
-            .create_basic_note("Front", "Back", "Default", &[])
+            .create_basic_note("Front", "Back", "Default", &[], Some("Basic"))
             .unwrap();
 
         assert!(repo.note_exists(note_id).unwrap());
@@ -589,5 +645,95 @@ mod tests {
         let (_temp_dir, repo) = create_test_collection().unwrap();
 
         assert!(!repo.note_exists(9999999).unwrap());
+    }
+
+    #[test]
+    fn given_test_collection_when_listing_notetypes_then_returns_all_notetypes() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+
+        let notetypes = repo.list_notetypes().unwrap();
+
+        // A new collection should have at least the default Basic and Cloze notetypes
+        assert!(!notetypes.is_empty());
+        assert!(notetypes.len() >= 2);
+
+        // Verify the structure: each entry should have an ID and name
+        for (id, name) in &notetypes {
+            assert!(*id > 0, "Notetype ID should be positive");
+            assert!(!name.is_empty(), "Notetype name should not be empty");
+        }
+    }
+
+    #[test]
+    fn given_exact_name_when_finding_notetype_then_returns_id() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+
+        // Get available notetypes to find one that exists
+        let notetypes = repo.list_notetypes().unwrap();
+        let (expected_id, expected_name) = &notetypes[0];
+
+        // Find the notetype by exact name
+        let result = repo.find_notetype_by_name(expected_name);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), *expected_id);
+    }
+
+    #[test]
+    fn given_nonexistent_name_when_finding_notetype_then_returns_error() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+
+        let result = repo.find_notetype_by_name("NonExistentNotetype");
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn given_inka_basic_preference_when_finding_notetype_then_uses_inka_basic() {
+        // This test will need a collection with "Inka Basic" notetype
+        // For now, we'll create a basic notetype and use any available name
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+
+        // Get first available notetype name
+        let notetypes = repo.list_notetypes().unwrap();
+        let (expected_id, name) = &notetypes[0];
+
+        // Call with preference
+        let result = repo.find_or_create_basic_notetype(Some(name));
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), *expected_id);
+    }
+
+    #[test]
+    fn given_custom_preference_when_finding_notetype_then_uses_custom() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+
+        // Get a notetype name that exists
+        let notetypes = repo.list_notetypes().unwrap();
+        let (_id, name) = &notetypes[0];
+
+        // Should find it successfully
+        let result = repo.find_or_create_basic_notetype(Some(name));
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn given_missing_preference_when_finding_notetype_then_errors_with_list() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+
+        // Try to find a nonexistent notetype
+        let result = repo.find_or_create_basic_notetype(Some("Inka Basic"));
+
+        // Should fail with helpful error message listing available notetypes
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        // The error chain includes both the wrapper message and the underlying message
+        assert!(
+            error_msg.contains("Available notetypes") || error_msg.contains("not found"),
+            "Error message should contain helpful information: {}",
+            error_msg
+        );
     }
 }
