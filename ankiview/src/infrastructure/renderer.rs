@@ -8,6 +8,8 @@ use std::sync::Arc;
 use tempfile::Builder;
 use tracing::instrument;
 
+use crate::constants::BROWSER_LAUNCH_DELAY_MS;
+
 #[derive(Debug)]
 pub struct ContentRenderer {
     latex_regex: Regex,
@@ -76,7 +78,7 @@ impl ContentRenderer {
         }
 
         // Keep the temp directory alive briefly
-        std::thread::sleep(std::time::Duration::from_millis(500));
+        std::thread::sleep(std::time::Duration::from_millis(BROWSER_LAUNCH_DELAY_MS));
 
         Ok(())
     }

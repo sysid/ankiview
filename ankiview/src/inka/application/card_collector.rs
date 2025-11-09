@@ -10,6 +10,40 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tracing::{debug, warn};
 
+/// Configuration for CardCollector behavior
+#[derive(Debug, Clone)]
+pub struct CollectorConfig {
+    /// Force overwrite of existing media files with same name
+    pub force: bool,
+    /// Bypass hash cache and process all files regardless of changes
+    pub full_sync: bool,
+    /// Search Anki for existing notes when markdown lacks ID comments
+    pub update_ids: bool,
+    /// Continue processing on errors instead of failing fast
+    pub ignore_errors: bool,
+    /// Specific card type (notetype) to use, defaults to "Inka Basic"
+    pub card_type: Option<String>,
+}
+
+impl CollectorConfig {
+    /// Create new config with default values (all false, no card type override)
+    pub fn new() -> Self {
+        Self {
+            force: false,
+            full_sync: false,
+            update_ids: false,
+            ignore_errors: false,
+            card_type: None,
+        }
+    }
+}
+
+impl Default for CollectorConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Main use case for collecting markdown cards into Anki
 pub struct CardCollector {
     _collection_path: PathBuf,
@@ -24,15 +58,8 @@ pub struct CardCollector {
 }
 
 impl CardCollector {
-    /// Create a new CardCollector with Anki collection path
-    pub fn new(
-        collection_path: impl AsRef<Path>,
-        force: bool,
-        full_sync: bool,
-        update_ids: bool,
-        ignore_errors: bool,
-        card_type: Option<String>,
-    ) -> Result<Self> {
+    /// Create a new CardCollector with Anki collection path and configuration
+    pub fn new(collection_path: impl AsRef<Path>, config: CollectorConfig) -> Result<Self> {
         let collection_path = collection_path.as_ref().to_path_buf();
 
         // Determine media directory path
@@ -53,7 +80,7 @@ impl CardCollector {
             .join("ankiview_hashes.json");
 
         // Load hash cache unless full_sync is enabled
-        let hash_cache = if full_sync {
+        let hash_cache = if config.full_sync {
             None
         } else {
             Some(HashCache::load(&cache_path).context("Failed to load hash cache")?)
@@ -63,7 +90,7 @@ impl CardCollector {
         let mut repository = AnkiRepository::new(&collection_path)?;
 
         // Validate card type early if provided
-        if let Some(ref card_type_name) = card_type {
+        if let Some(ref card_type_name) = config.card_type {
             repository
                 .find_notetype_by_name(card_type_name)
                 .with_context(|| {
@@ -79,12 +106,12 @@ impl CardCollector {
             _collection_path: collection_path,
             media_dir,
             repository,
-            force,
+            force: config.force,
             hash_cache,
-            update_ids,
-            ignore_errors,
+            update_ids: config.update_ids,
+            ignore_errors: config.ignore_errors,
             errors: Vec::new(),
-            card_type,
+            card_type: config.card_type,
         })
     }
 
@@ -94,6 +121,95 @@ impl CardCollector {
     }
 
     /// Add file path footer to HTML content
+    /// Process a single card (basic or cloze) with common logic
+    ///
+    /// Returns (updated_content, note_id) tuple
+    #[allow(clippy::too_many_arguments)]
+    fn process_card(
+        &mut self,
+        note_str: &str,
+        existing_id: Option<i64>,
+        fields_html: Vec<String>,
+        deck_name: &str,
+        tags: &[String],
+        content: String,
+        is_cloze: bool,
+    ) -> Result<(String, i64)> {
+        let mut content = content;
+
+        // Create or update note based on existing_id and mode
+        let note_id = if let Some(id) = existing_id {
+            // Check if note still exists before updating
+            if self.repository.note_exists(id)? {
+                // Update existing note
+                self.repository.update_note(id, &fields_html)?;
+                id
+            } else {
+                // Note was deleted - create new note and replace ID
+                eprintln!(
+                    "Warning: Note ID {} found in markdown but doesn't exist in Anki. Creating new note with new ID.",
+                    id
+                );
+                warn!(
+                    old_id = id,
+                    "Note ID found in markdown but note doesn't exist in Anki, creating new note"
+                );
+                let new_id = self.create_note(&fields_html, deck_name, tags, is_cloze)?;
+                // Strip ID comment from note_str before using as pattern
+                let note_pattern = file_writer::strip_id_comment(note_str);
+                content = file_writer::replace_anki_id(&content, &note_pattern, new_id);
+                new_id
+            }
+        } else if self.update_ids {
+            // --update-ids mode: search for existing note by HTML content
+            let matching_ids = self.repository.search_by_html(&fields_html)?;
+
+            if let Some(&id) = matching_ids.first() {
+                // Found existing note, inject ID
+                debug!(note_id = id, "Found existing note for card, injecting ID");
+                content = file_writer::inject_anki_id(&content, note_str, id);
+                // Update the existing note with current content
+                self.repository.update_note(id, &fields_html)?;
+                id
+            } else {
+                // No match found, create new note
+                let id = self.create_note(&fields_html, deck_name, tags, is_cloze)?;
+                content = file_writer::inject_anki_id(&content, note_str, id);
+                id
+            }
+        } else {
+            // Normal mode: create new note
+            let id = self.create_note(&fields_html, deck_name, tags, is_cloze)?;
+            // Inject ID back into markdown
+            content = file_writer::inject_anki_id(&content, note_str, id);
+            id
+        };
+
+        Ok((content, note_id))
+    }
+
+    /// Create a note (basic or cloze) in Anki
+    fn create_note(
+        &mut self,
+        fields_html: &[String],
+        deck_name: &str,
+        tags: &[String],
+        is_cloze: bool,
+    ) -> Result<i64> {
+        if is_cloze {
+            self.repository
+                .create_cloze_note(&fields_html[0], deck_name, tags)
+        } else {
+            self.repository.create_basic_note(
+                &fields_html[0],
+                &fields_html[1],
+                deck_name,
+                tags,
+                self.card_type.as_deref(),
+            )
+        }
+    }
+
     fn add_file_path_footer(&self, html: &str, file_path: &Path) -> String {
         let footer = format!(
             r#"<p><span style="font-size: 9pt;">File: {}</span></p>"#,
@@ -139,7 +255,8 @@ impl CardCollector {
         }
 
         // Read markdown file
-        let mut content = file_writer::read_markdown_file(markdown_path)?;
+        let mut content = file_writer::read_markdown_file(markdown_path)
+            .with_context(|| format!("Failed to read markdown file: {}", markdown_path.display()))?;
 
         // Parse sections first to identify inka2 blocks
         let parser = section_parser::SectionParser::new();
@@ -205,7 +322,8 @@ impl CardCollector {
                 // Determine card type and process
                 if card_parser::is_basic_card(&note_str) {
                     // Parse basic card fields
-                    let (front_md, back_md) = card_parser::parse_basic_card_fields(&note_str)?;
+                    let (front_md, back_md) = card_parser::parse_basic_card_fields(&note_str)
+                        .context("Failed to parse basic card fields")?;
 
                     // Convert to HTML
                     let mut front_html = converter::markdown_to_html(&front_md);
@@ -220,69 +338,22 @@ impl CardCollector {
                     // Add file path footer to back field
                     back_html = self.add_file_path_footer(&back_html, markdown_path);
 
-                    // Create or update note
-                    if let Some(id) = existing_id {
-                        // Check if note still exists before updating
-                        if self.repository.note_exists(id)? {
-                            // Update existing note
-                            self.repository
-                                .update_note(id, &[front_html.clone(), back_html.clone()])?;
-                        } else {
-                            // Note was deleted - create new note and replace ID
-                            eprintln!("Warning: Note ID {} found in markdown but doesn't exist in Anki. Creating new note with new ID.", id);
-                            warn!(old_id = id, "Note ID found in markdown but note doesn't exist in Anki, creating new note");
-                            let new_id = self.repository.create_basic_note(
-                                &front_html,
-                                &back_html,
-                                &deck_name,
-                                &tags,
-                                self.card_type.as_deref(),
-                            )?;
-                            // Strip ID comment from note_str before using as pattern
-                            let note_pattern = file_writer::strip_id_comment(&note_str);
-                            content = file_writer::replace_anki_id(&content, &note_pattern, new_id);
-                        }
-                    } else if self.update_ids {
-                        // --update-ids mode: search for existing note by HTML content
-                        let matching_ids = self
-                            .repository
-                            .search_by_html(&[front_html.clone(), back_html.clone()])?;
-
-                        if let Some(&id) = matching_ids.first() {
-                            // Found existing note, inject ID
-                            debug!(note_id = id, "Found existing note for card, injecting ID");
-                            content = file_writer::inject_anki_id(&content, &note_str, id);
-                            // Update the existing note with current content
-                            self.repository.update_note(id, &[front_html, back_html])?;
-                        } else {
-                            // No match found, create new note
-                            let id = self.repository.create_basic_note(
-                                &front_html,
-                                &back_html,
-                                &deck_name,
-                                &tags,
-                                self.card_type.as_deref(),
-                            )?;
-                            content = file_writer::inject_anki_id(&content, &note_str, id);
-                        }
-                    } else {
-                        // Normal mode: create new note
-                        let id = self.repository.create_basic_note(
-                            &front_html,
-                            &back_html,
-                            &deck_name,
-                            &tags,
-                            self.card_type.as_deref(),
-                        )?;
-
-                        // Inject ID back into markdown
-                        content = file_writer::inject_anki_id(&content, &note_str, id);
-                    };
-
+                    // Process basic card
+                    let (updated_content, _id) = self.process_card(
+                        &note_str,
+                        existing_id,
+                        vec![front_html, back_html],
+                        &deck_name,
+                        &tags,
+                        content,
+                        false,
+                    )?;
+                    content = updated_content;
                     card_count += 1;
                 } else if card_parser::is_cloze_card(&note_str) {
                     // Parse cloze card
-                    let text_md = card_parser::parse_cloze_card_field(&note_str)?;
+                    let text_md = card_parser::parse_cloze_card_field(&note_str)
+                        .context("Failed to parse cloze card field")?;
 
                     // Transform cloze syntax
                     let text_transformed = crate::inka::infrastructure::markdown::cloze_converter::convert_cloze_syntax(&text_md);
@@ -297,60 +368,25 @@ impl CardCollector {
                     // Add file path footer to text field
                     text_html = self.add_file_path_footer(&text_html, markdown_path);
 
-                    // Create or update note
-                    if let Some(id) = existing_id {
-                        // Check if note still exists before updating
-                        if self.repository.note_exists(id)? {
-                            // Update existing note
-                            self.repository.update_note(id, &[text_html.clone()])?;
-                        } else {
-                            // Note was deleted - create new note and replace ID
-                            eprintln!("Warning: Note ID {} found in markdown but doesn't exist in Anki. Creating new note with new ID.", id);
-                            warn!(old_id = id, "Note ID found in markdown but note doesn't exist in Anki, creating new note");
-                            let new_id = self
-                                .repository
-                                .create_cloze_note(&text_html, &deck_name, &tags)?;
-                            // Strip ID comment from note_str before using as pattern
-                            let note_pattern = file_writer::strip_id_comment(&note_str);
-                            content = file_writer::replace_anki_id(&content, &note_pattern, new_id);
-                        }
-                    } else if self.update_ids {
-                        // --update-ids mode: search for existing note by HTML content
-                        let matching_ids = self.repository.search_by_html(&[text_html.clone()])?;
-
-                        if let Some(&id) = matching_ids.first() {
-                            // Found existing note, inject ID
-                            debug!(
-                                note_id = id,
-                                "Found existing note for cloze card, injecting ID"
-                            );
-                            content = file_writer::inject_anki_id(&content, &note_str, id);
-                            // Update the existing note with current content
-                            self.repository.update_note(id, &[text_html])?;
-                        } else {
-                            // No match found, create new note
-                            let id = self
-                                .repository
-                                .create_cloze_note(&text_html, &deck_name, &tags)?;
-                            content = file_writer::inject_anki_id(&content, &note_str, id);
-                        }
-                    } else {
-                        // Normal mode: create new note
-                        let id = self
-                            .repository
-                            .create_cloze_note(&text_html, &deck_name, &tags)?;
-
-                        // Inject ID back into markdown
-                        content = file_writer::inject_anki_id(&content, &note_str, id);
-                    };
-
+                    // Process cloze card
+                    let (updated_content, _id) = self.process_card(
+                        &note_str,
+                        existing_id,
+                        vec![text_html],
+                        &deck_name,
+                        &tags,
+                        content,
+                        true,
+                    )?;
+                    content = updated_content;
                     card_count += 1;
                 }
             }
         }
 
         // Write updated content back to file if IDs were injected
-        file_writer::write_markdown_file(markdown_path, &content)?;
+        file_writer::write_markdown_file(markdown_path, &content)
+            .with_context(|| format!("Failed to write markdown file: {}", markdown_path.display()))?;
 
         // After successful processing, update hash cache
         if let Some(cache) = &mut self.hash_cache {
@@ -441,7 +477,7 @@ Deck: TestDeck
         fs::write(&markdown_path, markdown_content).unwrap();
 
         let mut collector =
-            CardCollector::new(&collection_path, false, false, false, false, None).unwrap();
+            CardCollector::new(&collection_path, CollectorConfig::default()).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 1);
@@ -460,7 +496,7 @@ Deck: TestDeck
         fs::write(&markdown_path, markdown_content).unwrap();
 
         let mut collector =
-            CardCollector::new(&collection_path, false, false, false, false, None).unwrap();
+            CardCollector::new(&collection_path, CollectorConfig::default()).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 1);
@@ -485,7 +521,7 @@ Deck: TestDeck
         fs::write(&markdown_path, markdown_content).unwrap();
 
         let mut collector =
-            CardCollector::new(&collection_path, false, false, false, false, None).unwrap();
+            CardCollector::new(&collection_path, CollectorConfig::default()).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 3);
@@ -505,7 +541,7 @@ Deck: TestDeck
         fs::write(&markdown_path, markdown_content).unwrap();
 
         let mut collector =
-            CardCollector::new(&collection_path, false, false, false, false, None).unwrap();
+            CardCollector::new(&collection_path, CollectorConfig::default()).unwrap();
 
         // First run creates note
         let count1 = collector.process_file(&markdown_path).unwrap();
@@ -535,7 +571,7 @@ Deck: TestDeck
         fs::write(&markdown_path, "Just text, no sections").unwrap();
 
         let mut collector =
-            CardCollector::new(&collection_path, false, false, false, false, None).unwrap();
+            CardCollector::new(&collection_path, CollectorConfig::default()).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 0);
@@ -583,7 +619,7 @@ Deck: Test
         fs::write(&txt_file, "This is not markdown").unwrap();
 
         let mut collector =
-            CardCollector::new(&collection_path, false, false, false, false, None).unwrap();
+            CardCollector::new(&collection_path, CollectorConfig::default()).unwrap();
         let count = collector.process_directory(&notes_dir).unwrap();
 
         // Should process both markdown files
@@ -606,7 +642,14 @@ Deck: TestDeck
 
         // Process with ignore_errors = true
         let mut collector =
-            CardCollector::new(&collection_path, false, false, false, true, None).unwrap();
+            CardCollector::new(
+                &collection_path,
+                CollectorConfig {
+                    ignore_errors: true,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         // Should return 0 cards since processing failed
@@ -637,7 +680,7 @@ Deck: TestDeck
 
         // Process with ignore_errors = false
         let mut collector =
-            CardCollector::new(&collection_path, false, false, false, false, None).unwrap();
+            CardCollector::new(&collection_path, CollectorConfig::default()).unwrap();
         let result = collector.process_file(&markdown_path);
 
         // Should return an error
@@ -671,7 +714,7 @@ Deck: TestDeck
 
         // Process the file
         let mut collector =
-            CardCollector::new(&collection_path, false, false, false, false, None).unwrap();
+            CardCollector::new(&collection_path, CollectorConfig::default()).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 1);
@@ -702,7 +745,7 @@ Deck: TestDeck
         fs::write(&markdown_path, markdown_content).unwrap();
 
         let mut collector =
-            CardCollector::new(&collection_path, false, false, false, false, None).unwrap();
+            CardCollector::new(&collection_path, CollectorConfig::default()).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
         assert_eq!(count, 1, "Should create one card");
     }
@@ -720,7 +763,7 @@ Deck: TestDeck
         fs::write(&markdown_path, markdown_content).unwrap();
 
         let mut collector =
-            CardCollector::new(&collection_path, false, false, false, false, None).unwrap();
+            CardCollector::new(&collection_path, CollectorConfig::default()).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
         assert_eq!(count, 1, "Should create one cloze card");
     }
@@ -728,7 +771,7 @@ Deck: TestDeck
     #[test]
     fn given_file_path_footer_helper_when_called_then_formats_correctly() {
         let (_temp_dir, collection_path, _media_dir) = create_test_collection();
-        let collector = CardCollector::new(&collection_path, false, false, false, false, None).unwrap();
+        let collector = CardCollector::new(&collection_path, CollectorConfig::default()).unwrap();
 
         let html = "<p>Sample text</p>";
         let path = std::path::Path::new("/tmp/test.md");
@@ -768,7 +811,7 @@ Deck: TestDeck
 
         // Process the file - should succeed without error
         let mut collector =
-            CardCollector::new(&collection_path, false, false, false, false, None).unwrap();
+            CardCollector::new(&collection_path, CollectorConfig::default()).unwrap();
         let count = collector.process_file(&markdown_path).unwrap();
 
         assert_eq!(count, 1, "Should create one card");
@@ -802,11 +845,10 @@ Deck: TestDeck
         // Act - Try to create collector with invalid card type
         let result = CardCollector::new(
             &collection_path,
-            false,
-            false,
-            false,
-            false,
-            Some("NonExistentCardType".to_string()),
+            CollectorConfig {
+                card_type: Some("NonExistentCardType".to_string()),
+                ..Default::default()
+            },
         );
 
         // Assert

@@ -26,7 +26,7 @@ MAN_PAGES = $(MANS:.md=.1)
 MAN_BINS = $(filter-out ./tw-extras.md, $(MANS))
 
 .PHONY: all
-all: clean build-fast install  ## all
+all: clean build-fast install-debug  ## all
 	:
 
 ################################################################################

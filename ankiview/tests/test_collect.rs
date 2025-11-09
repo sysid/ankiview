@@ -26,13 +26,10 @@ Deck: IntegrationTest
     fs::write(&markdown_path, markdown_content)?;
 
     // Act
+    let config = ankiview::inka::application::card_collector::CollectorConfig::new();
     let mut collector = ankiview::inka::application::card_collector::CardCollector::new(
         &test_collection.collection_path,
-        false,
-        false,
-        false,
-        false,
-        None,
+        config,
     )?;
     let count = collector.process_file(&markdown_path)?;
 
@@ -89,13 +86,10 @@ Deck: Integration
     )?;
 
     // Act
+    let config = ankiview::inka::application::card_collector::CollectorConfig::new();
     let mut collector = ankiview::inka::application::card_collector::CardCollector::new(
         &test_collection.collection_path,
-        false,
-        false,
-        false,
-        false,
-        None,
+        config,
     )?;
     let count = collector.process_directory(&notes_dir)?;
 
@@ -129,13 +123,10 @@ Deck: UpdateTest
     fs::write(&markdown_path, initial_content)?;
 
     // First collection run
+    let config = ankiview::inka::application::card_collector::CollectorConfig::new();
     let mut collector = ankiview::inka::application::card_collector::CardCollector::new(
         &test_collection.collection_path,
-        false,
-        false,
-        false,
-        false,
-        None,
+        config,
     )?;
     let count1 = collector.process_file(&markdown_path)?;
     assert_eq!(count1, 1);
@@ -194,13 +185,10 @@ Tags: test integration
 
     // Act
     let count = {
+        let config = ankiview::inka::application::card_collector::CollectorConfig::new();
         let mut collector = ankiview::inka::application::card_collector::CardCollector::new(
             &test_collection.collection_path,
-            false,
-            false,
-            false,
-            false,
-            None,
+            config,
         )?;
         collector.process_file(&markdown_path)?
     }; // Collector dropped here, releasing the lock
@@ -261,13 +249,10 @@ Deck: OrphanTest
     fs::write(&markdown_path, initial_content)?;
 
     {
+        let config = ankiview::inka::application::card_collector::CollectorConfig::new();
         let mut collector = ankiview::inka::application::card_collector::CardCollector::new(
             &test_collection.collection_path,
-            false,
-            false,
-            false,
-            false,
-            None,
+            config,
         )?;
         collector.process_file(&markdown_path)?;
     } // Drop collector to release lock
@@ -296,13 +281,11 @@ Deck: OrphanTest
 
     // Act - Try to collect again with the orphaned ID
     let result = {
+        let mut config = ankiview::inka::application::card_collector::CollectorConfig::new();
+        config.full_sync = true; // bypass hash cache
         let mut collector = ankiview::inka::application::card_collector::CardCollector::new(
             &test_collection.collection_path,
-            false,
-            true, // full_sync=true to bypass hash cache
-            false,
-            false,
-            None,
+            config,
         )?;
         collector.process_file(&markdown_path)
     }; // Drop collector to release lock
