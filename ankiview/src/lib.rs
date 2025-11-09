@@ -166,22 +166,24 @@ fn handle_collect_command(
     card_type: Option<String>,
     collection_path: PathBuf,
 ) -> Result<()> {
-    use crate::inka::application::card_collector::CardCollector;
+    use crate::inka::application::card_collector::{CardCollector, CollectorConfig};
 
     info!(
         ?path,
         recursive, force, ignore_errors, full_sync, update_ids, ?card_type, "Collecting markdown cards"
     );
 
-    // Initialize collector with force, full_sync, update_ids, ignore_errors, and card_type
-    let mut collector = CardCollector::new(
-        &collection_path,
+    // Build configuration
+    let config = CollectorConfig {
         force,
         full_sync,
         update_ids,
         ignore_errors,
         card_type,
-    )?;
+    };
+
+    // Initialize collector
+    let mut collector = CardCollector::new(&collection_path, config)?;
 
     // Process based on path type
     let total_cards = if path.is_file() {
