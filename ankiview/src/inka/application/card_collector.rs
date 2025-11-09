@@ -229,6 +229,7 @@ impl CardCollector {
                                 .update_note(id, &[front_html.clone(), back_html.clone()])?;
                         } else {
                             // Note was deleted - create new note and replace ID
+                            eprintln!("Warning: Note ID {} found in markdown but doesn't exist in Anki. Creating new note with new ID.", id);
                             warn!(old_id = id, "Note ID found in markdown but note doesn't exist in Anki, creating new note");
                             let new_id = self.repository.create_basic_note(
                                 &front_html,
@@ -304,6 +305,7 @@ impl CardCollector {
                             self.repository.update_note(id, &[text_html.clone()])?;
                         } else {
                             // Note was deleted - create new note and replace ID
+                            eprintln!("Warning: Note ID {} found in markdown but doesn't exist in Anki. Creating new note with new ID.", id);
                             warn!(old_id = id, "Note ID found in markdown but note doesn't exist in Anki, creating new note");
                             let new_id = self
                                 .repository

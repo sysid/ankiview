@@ -25,6 +25,10 @@ MAN_PAGES = $(MANS:.md=.1)
 # avoid circular targets
 MAN_BINS = $(filter-out ./tw-extras.md, $(MANS))
 
+.PHONY: all
+all: clean build-fast install  ## all
+	:
+
 ################################################################################
 # Admin \
 ADMIN::  ## ##################################################################
@@ -75,10 +79,6 @@ BUILDING:  ## ##################################################################
 doc:  ## doc
 	@rustup doc --std
 	pushd $(pkg_src) && cargo doc --open
-
-.PHONY: all
-all: clean build install  ## all
-	:
 
 .PHONY: upload
 upload:  ## upload
