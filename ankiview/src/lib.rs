@@ -1,4 +1,20 @@
 // src/lib.rs
+//
+// Architectural Decision: Direct Infrastructure Coupling
+//
+// This module intentionally couples directly to infrastructure layer (AnkiRepository,
+// ContentRenderer, find_collection_path). While this violates strict Clean Architecture,
+// it's a pragmatic choice for a CLI application because:
+//
+// 1. Single implementation: We only support Anki, no plans for alternative backends
+// 2. Simplicity: Adding abstraction layers (ProfileLocator, services) adds complexity
+//    without providing value (YAGNI principle)
+// 3. Testability: Integration tests cover the full stack; unit testing command handlers
+//    provides minimal additional value
+// 4. Maintainability: Simpler code is easier to understand and maintain
+//
+// If we ever need to support multiple backends, we can refactor at that point.
+
 pub mod application;
 pub mod cli;
 pub mod constants;
@@ -227,6 +243,17 @@ fn handle_collect_command(
     Ok(())
 }
 
+/// Find the Anki collection path for a given profile.
+///
+/// This function contains platform-specific logic for locating Anki's data directory.
+/// While this is technically infrastructure logic, it's kept in lib.rs for simplicity
+/// (see architectural decision comment at top of file).
+///
+/// # Arguments
+/// * `profile` - Optional profile name. If None, finds the first valid profile.
+///
+/// # Returns
+/// The path to collection.anki2 file for the specified or default profile.
 pub fn find_collection_path(profile: Option<&str>) -> Result<PathBuf> {
     let home = dirs::home_dir().context("Could not find home directory")?;
 
