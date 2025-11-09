@@ -30,7 +30,7 @@ tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 
 # inka dependencies
-markdown-it = "0.6"
+pulldown-cmark = "0.12"
 toml = "0.8"
 sha2 = "0.10"
 walkdir = "2.4"

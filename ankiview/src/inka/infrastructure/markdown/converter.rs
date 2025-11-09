@@ -1,22 +1,45 @@
-use super::mathjax_plugin::add_mathjax_plugin;
 use lazy_static::lazy_static;
-use markdown_it::MarkdownIt;
+use pulldown_cmark::{html, Options, Parser};
 use regex::Regex;
 
 lazy_static! {
     static ref NEWLINE_TAG_REGEX: Regex =
         Regex::new(r"\n?(<.+?>)\n?").expect("Failed to compile newline tag regex");
+    static ref INLINE_MATH_REGEX: Regex =
+        Regex::new(r"\$([^\s$][^$]*[^\s$])\$").expect("Failed to compile inline math regex");
+    // Match $$ blocks in HTML context (may have newlines and whitespace)
+    static ref BLOCK_MATH_REGEX: Regex =
+        Regex::new(r"\$\$\s*((?:.|\n)+?)\s*\$\$").expect("Failed to compile block math regex");
 }
 
 pub fn markdown_to_html(text: &str) -> String {
-    let mut parser = MarkdownIt::new();
-    markdown_it::plugins::cmark::add(&mut parser);
-    add_mathjax_plugin(&mut parser);
+    // Parse markdown with pulldown-cmark first
+    let mut options = Options::empty();
+    options.insert(Options::ENABLE_STRIKETHROUGH);
+    options.insert(Options::ENABLE_TABLES);
+    options.insert(Options::ENABLE_FOOTNOTES);
+    options.insert(Options::ENABLE_TASKLISTS);
 
-    let html = parser.parse(text).render();
+    let parser = Parser::new_ext(text, options);
 
-    // Remove newlines around HTML tags (Anki rendering quirk)
-    remove_newlines_around_tags(&html)
+    // Convert events to HTML
+    let mut html_output = String::new();
+    html::push_html(&mut html_output, parser);
+
+    // Post-process: Convert math delimiters and remove newlines around tags
+    let html_output = convert_math_delimiters(&html_output);
+    remove_newlines_around_tags(&html_output)
+}
+
+/// Convert $ and $$ delimiters to MathJax format after HTML rendering
+fn convert_math_delimiters(html: &str) -> String {
+    // First handle block math ($$...$$) to avoid conflicts with inline
+    let html = BLOCK_MATH_REGEX.replace_all(html, r"\[$1\]");
+
+    // Then handle inline math ($...$)
+    INLINE_MATH_REGEX
+        .replace_all(&html, r"\($1\)")
+        .to_string()
 }
 
 fn remove_newlines_around_tags(html: &str) -> String {

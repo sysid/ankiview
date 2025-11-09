@@ -13,6 +13,8 @@ use regex::Regex;
 /// # Examples
 ///
 /// ```
+/// use ankiview::util::text::extract_first_line;
+///
 /// let html = "<p>What is a Tree?</p><p>Second line</p>";
 /// let first_line = extract_first_line(html);
 /// assert_eq!(first_line, "What is a Tree?");
