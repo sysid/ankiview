@@ -1,6 +1,8 @@
 use anyhow::{Context, Result};
 use std::path::Path;
 
+use crate::constants::{ID_SEARCH_RANGE_AFTER, ID_SEARCH_RANGE_BEFORE};
+
 /// Strip ID comment lines from note string
 /// Returns the note text without any <!--ID:...--> lines
 pub fn strip_id_comment(note_str: &str) -> String {
@@ -35,8 +37,8 @@ pub fn inject_anki_id(content: &str, note_pattern: &str, anki_id: i64) -> String
     let before_note = &content[..note_pos];
 
     // Check if the previous line (or within a few chars) has an ID comment
-    // We'll look for <!--ID: pattern in the last 50 chars before the note
-    let check_start = before_note.len().saturating_sub(50);
+    // We'll look for <!--ID: pattern in the last N chars before the note
+    let check_start = before_note.len().saturating_sub(ID_SEARCH_RANGE_BEFORE);
     let check_region = &before_note[check_start..];
 
     if check_region.contains("<!--ID:") {
@@ -66,9 +68,9 @@ pub fn replace_anki_id(content: &str, note_pattern: &str, new_id: i64) -> String
     // Check if there's already an ID before this note
     let before_note = &content[..note_pos];
 
-    // Look for <!--ID: pattern in the last 100 chars before the note
+    // Look for <!--ID: pattern in the last N chars before the note
     // Use rfind to get the LAST occurrence (closest to the note)
-    let check_start = before_note.len().saturating_sub(100);
+    let check_start = before_note.len().saturating_sub(ID_SEARCH_RANGE_AFTER);
     let check_region = &before_note[check_start..];
 
     if let Some(id_start_rel) = check_region.rfind("<!--ID:") {

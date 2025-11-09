@@ -1,6 +1,7 @@
 // src/lib.rs
 pub mod application;
 pub mod cli;
+pub mod constants;
 pub mod domain;
 pub mod infrastructure;
 pub mod inka;
