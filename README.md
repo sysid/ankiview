@@ -1,7 +1,7 @@
 # AnkiView 🎴
 
-AnkiView is a command-line tool that lets you quickly view Anki notes directly from your collection
-file, without needing to open the Anki application. Perfect for quick information gathering.
+A command-line tool for managing Anki collections: view, search, delete notes, and import markdown
+flashcards — all without opening Anki.
 
 > It serves also as a much more powerfull drop-in replacement for [inka2](https://github.com/sysid/inka2?tab=readme-ov-file).
 
