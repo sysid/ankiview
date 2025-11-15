@@ -122,33 +122,25 @@ uninstall:  ## uninstall
 	rm -vf ~/.bash_completions/ankiview
 
 .PHONY: bump-major
-bump-major:  ## bump-major, tag and push
+bump-major:  check-github-token  ## bump-major, tag and push
 	bump-my-version bump --commit --tag major
 	git push
 	git push --tags
 	@$(MAKE) create-release
 
 .PHONY: bump-minor
-bump-minor:  ## bump-minor, tag and push
+bump-minor:  check-github-token  ## bump-minor, tag and push
 	bump-my-version bump --commit --tag minor
 	git push
 	git push --tags
 	@$(MAKE) create-release
 
 .PHONY: bump-patch
-bump-patch:  ## bump-patch, tag and push
+bump-patch:  check-github-token  ## bump-patch, tag and push
 	bump-my-version bump --commit --tag patch
 	git push
 	git push --tags
 	@$(MAKE) create-release
-
-.PHONY: style
-style:  ## style
-	pushd $(pkg_src) && cargo fmt
-
-.PHONY: lint
-lint:  ## lint
-	pushd $(pkg_src) && cargo clippy
 
 .PHONY: create-release
 create-release: check-github-token  ## create a release on GitHub via the gh cli
@@ -170,12 +162,20 @@ check-github-token:  ## Check if GITHUB_TOKEN is set
 	#@$(MAKE) fix-version  # not working: rustrover deleay
 
 .PHONY: fix-version
-fix-version:  ## fix-version of Cargo.toml, re-connect with HEAD
+fix-version: check-github-token  ## fix-version of Cargo.toml, re-connect with HEAD
 	git add ankiview/Cargo.lock
 	git commit --amend --no-edit
 	git tag -f "v$(VERSION)"
 	git push --force-with-lease
 	git push --tags --force
+
+.PHONY: style
+style:  ## style
+	pushd $(pkg_src) && cargo fmt
+
+.PHONY: lint
+lint:  ## lint
+	pushd $(pkg_src) && cargo clippy
 
 
 ################################################################################

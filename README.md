@@ -1,11 +1,15 @@
 # AnkiView 🎴
 
-AnkiView is a command-line tool that lets you quickly view Anki notes directly from your collection file, without needing to open the Anki application. Perfect for quick information gathering.
+AnkiView is a command-line tool that lets you quickly view Anki notes directly from your collection
+file, without needing to open the Anki application. Perfect for quick information gathering.
+
+> It serves also as a much more powerfull drop-in replacement for [inka2](https://github.com/sysid/inka2?tab=readme-ov-file).
 
 ## Features ✨
 
 - **View notes** - View any note by its ID in your default browser
 - **Delete notes** - Delete notes from your collection via CLI
+- **List notes** - Browse and search notes from the command line
 - **List card types** - See available card types in your collection
 - **Import markdown** - Convert markdown flashcards to Anki notes
 - **Smart updates** - Automatically track cards with ID comments
@@ -74,6 +78,25 @@ Global flags work with all commands:
 ankiview -c /path/to/collection.anki2 delete 1234567890
 ankiview -p "User 1" delete 1234567890
 ```
+
+### List notes
+
+List all notes in your collection with their IDs and first line of content:
+
+```bash
+ankiview list
+```
+
+Filter notes by searching the front field:
+
+```bash
+ankiview list "rust programming"
+```
+
+This is useful for:
+- Finding note IDs when you know the content
+- Browsing your collection from the command line
+- Quick searches without opening Anki
 
 ### List available card types
 
