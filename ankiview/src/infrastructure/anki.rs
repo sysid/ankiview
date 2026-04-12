@@ -904,4 +904,166 @@ mod tests {
             error_msg
         );
     }
+
+    // --- T009: Integration tests for add_tags and remove_tags ---
+
+    #[test]
+    fn given_note_with_tags_when_adding_new_tag_then_merges() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+        let note_id = repo
+            .create_basic_note("Q", "A", "Default", &["physics".to_string()], Some("Basic"))
+            .unwrap();
+
+        repo.add_tags(note_id, &["review".to_string()]).unwrap();
+
+        let note = repo.get_note(note_id).unwrap();
+        assert!(note.tags.contains(&"physics".to_string()));
+        assert!(note.tags.contains(&"review".to_string()));
+    }
+
+    #[test]
+    fn given_note_when_adding_duplicate_tag_then_no_duplicate() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+        let note_id = repo
+            .create_basic_note("Q", "A", "Default", &["physics".to_string()], Some("Basic"))
+            .unwrap();
+
+        repo.add_tags(note_id, &["physics".to_string()]).unwrap();
+
+        let note = repo.get_note(note_id).unwrap();
+        assert_eq!(note.tags.iter().filter(|t| *t == "physics").count(), 1);
+    }
+
+    #[test]
+    fn given_note_when_adding_hierarchical_tag_then_stored_correctly() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+        let note_id = repo
+            .create_basic_note("Q", "A", "Default", &[], Some("Basic"))
+            .unwrap();
+
+        repo.add_tags(note_id, &["topic::math::algebra".to_string()])
+            .unwrap();
+
+        let note = repo.get_note(note_id).unwrap();
+        assert!(note.tags.contains(&"topic::math::algebra".to_string()));
+    }
+
+    #[test]
+    fn given_note_with_tags_when_removing_tag_then_removed() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+        let note_id = repo
+            .create_basic_note(
+                "Q",
+                "A",
+                "Default",
+                &["physics".to_string(), "review".to_string()],
+                Some("Basic"),
+            )
+            .unwrap();
+
+        repo.remove_tags(note_id, &["review".to_string()]).unwrap();
+
+        let note = repo.get_note(note_id).unwrap();
+        assert!(note.tags.contains(&"physics".to_string()));
+        assert!(!note.tags.contains(&"review".to_string()));
+    }
+
+    #[test]
+    fn given_note_when_removing_nonexistent_tag_then_no_error() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+        let note_id = repo
+            .create_basic_note("Q", "A", "Default", &["physics".to_string()], Some("Basic"))
+            .unwrap();
+
+        // Should not error when removing a tag that doesn't exist
+        repo.remove_tags(note_id, &["nonexistent".to_string()])
+            .unwrap();
+
+        let note = repo.get_note(note_id).unwrap();
+        assert!(note.tags.contains(&"physics".to_string()));
+    }
+
+    // --- T010: Integration tests for update_note_fields_and_tags ---
+
+    #[test]
+    fn given_note_when_updating_fields_and_tags_then_both_change() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+        let note_id = repo
+            .create_basic_note(
+                "Old Q",
+                "Old A",
+                "Default",
+                &["old-tag".to_string()],
+                Some("Basic"),
+            )
+            .unwrap();
+
+        repo.update_note_fields_and_tags(
+            note_id,
+            &["New Q".to_string(), "New A".to_string()],
+            &["new-tag".to_string()],
+        )
+        .unwrap();
+
+        let note = repo.get_note(note_id).unwrap();
+        assert!(note.front.contains("New Q"));
+        assert!(note.back.contains("New A"));
+        assert!(note.tags.contains(&"new-tag".to_string()));
+        assert!(!note.tags.contains(&"old-tag".to_string()));
+    }
+
+    // --- T011: Integration tests for replace_tag ---
+
+    #[test]
+    fn given_notes_with_tag_when_replacing_then_renamed() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+        let id1 = repo
+            .create_basic_note("Q1", "A1", "Default", &["review".to_string()], Some("Basic"))
+            .unwrap();
+        let id2 = repo
+            .create_basic_note("Q2", "A2", "Default", &["review".to_string()], Some("Basic"))
+            .unwrap();
+
+        let affected = repo.replace_tag(None, "review", "reviewed").unwrap();
+
+        assert_eq!(affected, 2);
+        let n1 = repo.get_note(id1).unwrap();
+        let n2 = repo.get_note(id2).unwrap();
+        assert!(n1.tags.contains(&"reviewed".to_string()));
+        assert!(!n1.tags.contains(&"review".to_string()));
+        assert!(n2.tags.contains(&"reviewed".to_string()));
+    }
+
+    #[test]
+    fn given_notes_when_bulk_adding_tag_then_all_get_tag() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+        let id1 = repo
+            .create_basic_note("Q1", "A1", "Default", &[], Some("Basic"))
+            .unwrap();
+        let id2 = repo
+            .create_basic_note("Q2", "A2", "Default", &[], Some("Basic"))
+            .unwrap();
+
+        let affected = repo.replace_tag(None, "", "batch-2026").unwrap();
+
+        assert_eq!(affected, 2);
+        assert!(repo.get_note(id1).unwrap().tags.contains(&"batch-2026".to_string()));
+        assert!(repo.get_note(id2).unwrap().tags.contains(&"batch-2026".to_string()));
+    }
+
+    #[test]
+    fn given_notes_with_tag_when_bulk_removing_then_tag_gone() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+        let id1 = repo
+            .create_basic_note("Q1", "A1", "Default", &["obsolete".to_string()], Some("Basic"))
+            .unwrap();
+        let _id2 = repo
+            .create_basic_note("Q2", "A2", "Default", &[], Some("Basic"))
+            .unwrap();
+
+        let affected = repo.replace_tag(None, "obsolete", "").unwrap();
+
+        assert_eq!(affected, 1);
+        assert!(!repo.get_note(id1).unwrap().tags.contains(&"obsolete".to_string()));
+    }
 }

@@ -1,3 +1,4 @@
+use crate::application::NoteRepository;
 use crate::infrastructure::anki::AnkiRepository;
 use crate::inka::infrastructure::file_writer;
 use crate::inka::infrastructure::hasher::HashCache;
@@ -143,6 +144,10 @@ impl CardCollector {
             if self.repository.note_exists(id)? {
                 // Update existing note
                 self.repository.update_note(id, &fields_html)?;
+                // Merge tags from markdown (additive only, never removes)
+                if !tags.is_empty() {
+                    self.repository.add_tags(id, tags)?;
+                }
                 id
             } else {
                 // Note was deleted - create new note and replace ID
@@ -170,6 +175,10 @@ impl CardCollector {
                 content = file_writer::inject_anki_id(&content, note_str, id);
                 // Update the existing note with current content
                 self.repository.update_note(id, &fields_html)?;
+                // Merge tags from markdown (additive only, never removes)
+                if !tags.is_empty() {
+                    self.repository.add_tags(id, tags)?;
+                }
                 id
             } else {
                 // No match found, create new note
