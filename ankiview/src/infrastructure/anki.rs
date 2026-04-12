@@ -346,6 +346,82 @@ impl AnkiRepository {
     }
 }
 
+// --- Tag and field update helpers (used by NoteRepository trait impl) ---
+
+impl AnkiRepository {
+    /// Add tags to a note, merging with existing tags (no duplicates)
+    fn merge_tags_on_note(&mut self, note_id: i64, new_tags: &[String]) -> Result<()> {
+        let mut note = self
+            .collection
+            .storage
+            .get_note(NoteId(note_id))
+            .context("Failed to get note from storage")?
+            .ok_or_else(|| anyhow::anyhow!("Note not found: {}", note_id))?;
+
+        // Merge: add only tags not already present
+        for tag in new_tags {
+            if !note.tags.iter().any(|t| t == tag) {
+                note.tags.push(tag.clone());
+            }
+        }
+
+        self.collection
+            .update_note(&mut note)
+            .context("Failed to update note tags")?;
+
+        debug!(note_id, tags_added = new_tags.len(), "Merged tags on note");
+        Ok(())
+    }
+
+    /// Remove specific tags from a note
+    fn remove_tags_from_note(&mut self, note_id: i64, tags_to_remove: &[String]) -> Result<()> {
+        let mut note = self
+            .collection
+            .storage
+            .get_note(NoteId(note_id))
+            .context("Failed to get note from storage")?
+            .ok_or_else(|| anyhow::anyhow!("Note not found: {}", note_id))?;
+
+        note.tags.retain(|t| !tags_to_remove.contains(t));
+
+        self.collection
+            .update_note(&mut note)
+            .context("Failed to update note tags")?;
+
+        debug!(note_id, "Removed tags from note");
+        Ok(())
+    }
+
+    /// Update fields and tags on a note
+    fn update_fields_and_tags(
+        &mut self,
+        note_id: i64,
+        fields: &[String],
+        tags: &[String],
+    ) -> Result<()> {
+        let mut note = self
+            .collection
+            .storage
+            .get_note(NoteId(note_id))
+            .context("Failed to get note from storage")?
+            .ok_or_else(|| anyhow::anyhow!("Note not found: {}", note_id))?;
+
+        for (index, field_value) in fields.iter().enumerate() {
+            note.set_field(index, field_value)
+                .with_context(|| format!("Failed to set field {} on note {}", index, note_id))?;
+        }
+
+        note.tags = tags.to_vec();
+
+        self.collection
+            .update_note(&mut note)
+            .context("Failed to update note")?;
+
+        debug!(note_id, "Updated note fields and tags");
+        Ok(())
+    }
+}
+
 impl NoteRepository for AnkiRepository {
     #[instrument(level = "debug", skip(self))]
     fn get_note(&mut self, id: i64) -> Result<Note, DomainError> {
@@ -472,6 +548,98 @@ impl NoteRepository for AnkiRepository {
             .collect();
 
         Ok(notetypes)
+    }
+
+    #[instrument(level = "debug", skip(self))]
+    fn add_tags(&mut self, id: i64, tags: &[String]) -> Result<(), DomainError> {
+        self.merge_tags_on_note(id, tags)
+            .map_err(|e| DomainError::CollectionError(e.to_string()))
+    }
+
+    #[instrument(level = "debug", skip(self))]
+    fn remove_tags(&mut self, id: i64, tags: &[String]) -> Result<(), DomainError> {
+        self.remove_tags_from_note(id, tags)
+            .map_err(|e| DomainError::CollectionError(e.to_string()))
+    }
+
+    #[instrument(level = "debug", skip(self))]
+    fn update_note_fields_and_tags(
+        &mut self,
+        id: i64,
+        fields: &[String],
+        tags: &[String],
+    ) -> Result<(), DomainError> {
+        self.update_fields_and_tags(id, fields, tags)
+            .map_err(|e| DomainError::CollectionError(e.to_string()))
+    }
+
+    #[instrument(level = "debug", skip(self))]
+    fn replace_tag(
+        &mut self,
+        query: Option<&str>,
+        old_tag: &str,
+        new_tag: &str,
+    ) -> Result<usize, DomainError> {
+        use anki::search::SearchNode;
+
+        // Get note IDs based on query
+        let note_ids = match query {
+            Some(q) if !q.is_empty() => self
+                .collection
+                .search_notes_unordered(q)
+                .map_err(|e| DomainError::CollectionError(e.to_string()))?,
+            _ => {
+                let search_node = SearchNode::WholeCollection;
+                self.collection
+                    .search_notes_unordered(search_node)
+                    .map_err(|e| DomainError::CollectionError(e.to_string()))?
+            }
+        };
+
+        let mut affected = 0;
+
+        for note_id in note_ids {
+            let mut note = match self.collection.storage.get_note(note_id) {
+                Ok(Some(n)) => n,
+                _ => continue,
+            };
+
+            let had_old_tag = !old_tag.is_empty() && note.tags.iter().any(|t| t == old_tag);
+            let mut changed = false;
+
+            if old_tag.is_empty() {
+                // Bulk add mode: add new_tag if not present
+                if !note.tags.iter().any(|t| t == new_tag) {
+                    note.tags.push(new_tag.to_string());
+                    changed = true;
+                }
+            } else if new_tag.is_empty() {
+                // Bulk remove mode: remove old_tag
+                if had_old_tag {
+                    note.tags.retain(|t| t != old_tag);
+                    changed = true;
+                }
+            } else {
+                // Rename mode: replace old_tag with new_tag
+                if had_old_tag {
+                    note.tags.retain(|t| t != old_tag);
+                    if !note.tags.iter().any(|t| t == new_tag) {
+                        note.tags.push(new_tag.to_string());
+                    }
+                    changed = true;
+                }
+            }
+
+            if changed {
+                self.collection
+                    .update_note(&mut note)
+                    .map_err(|e| DomainError::CollectionError(e.to_string()))?;
+                affected += 1;
+            }
+        }
+
+        debug!(affected, old_tag, new_tag, "Tag replace completed");
+        Ok(affected)
     }
 }
 
@@ -735,5 +903,167 @@ mod tests {
             "Error message should contain helpful information: {}",
             error_msg
         );
+    }
+
+    // --- T009: Integration tests for add_tags and remove_tags ---
+
+    #[test]
+    fn given_note_with_tags_when_adding_new_tag_then_merges() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+        let note_id = repo
+            .create_basic_note("Q", "A", "Default", &["physics".to_string()], Some("Basic"))
+            .unwrap();
+
+        repo.add_tags(note_id, &["review".to_string()]).unwrap();
+
+        let note = repo.get_note(note_id).unwrap();
+        assert!(note.tags.contains(&"physics".to_string()));
+        assert!(note.tags.contains(&"review".to_string()));
+    }
+
+    #[test]
+    fn given_note_when_adding_duplicate_tag_then_no_duplicate() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+        let note_id = repo
+            .create_basic_note("Q", "A", "Default", &["physics".to_string()], Some("Basic"))
+            .unwrap();
+
+        repo.add_tags(note_id, &["physics".to_string()]).unwrap();
+
+        let note = repo.get_note(note_id).unwrap();
+        assert_eq!(note.tags.iter().filter(|t| *t == "physics").count(), 1);
+    }
+
+    #[test]
+    fn given_note_when_adding_hierarchical_tag_then_stored_correctly() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+        let note_id = repo
+            .create_basic_note("Q", "A", "Default", &[], Some("Basic"))
+            .unwrap();
+
+        repo.add_tags(note_id, &["topic::math::algebra".to_string()])
+            .unwrap();
+
+        let note = repo.get_note(note_id).unwrap();
+        assert!(note.tags.contains(&"topic::math::algebra".to_string()));
+    }
+
+    #[test]
+    fn given_note_with_tags_when_removing_tag_then_removed() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+        let note_id = repo
+            .create_basic_note(
+                "Q",
+                "A",
+                "Default",
+                &["physics".to_string(), "review".to_string()],
+                Some("Basic"),
+            )
+            .unwrap();
+
+        repo.remove_tags(note_id, &["review".to_string()]).unwrap();
+
+        let note = repo.get_note(note_id).unwrap();
+        assert!(note.tags.contains(&"physics".to_string()));
+        assert!(!note.tags.contains(&"review".to_string()));
+    }
+
+    #[test]
+    fn given_note_when_removing_nonexistent_tag_then_no_error() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+        let note_id = repo
+            .create_basic_note("Q", "A", "Default", &["physics".to_string()], Some("Basic"))
+            .unwrap();
+
+        // Should not error when removing a tag that doesn't exist
+        repo.remove_tags(note_id, &["nonexistent".to_string()])
+            .unwrap();
+
+        let note = repo.get_note(note_id).unwrap();
+        assert!(note.tags.contains(&"physics".to_string()));
+    }
+
+    // --- T010: Integration tests for update_note_fields_and_tags ---
+
+    #[test]
+    fn given_note_when_updating_fields_and_tags_then_both_change() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+        let note_id = repo
+            .create_basic_note(
+                "Old Q",
+                "Old A",
+                "Default",
+                &["old-tag".to_string()],
+                Some("Basic"),
+            )
+            .unwrap();
+
+        repo.update_note_fields_and_tags(
+            note_id,
+            &["New Q".to_string(), "New A".to_string()],
+            &["new-tag".to_string()],
+        )
+        .unwrap();
+
+        let note = repo.get_note(note_id).unwrap();
+        assert!(note.front.contains("New Q"));
+        assert!(note.back.contains("New A"));
+        assert!(note.tags.contains(&"new-tag".to_string()));
+        assert!(!note.tags.contains(&"old-tag".to_string()));
+    }
+
+    // --- T011: Integration tests for replace_tag ---
+
+    #[test]
+    fn given_notes_with_tag_when_replacing_then_renamed() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+        let id1 = repo
+            .create_basic_note("Q1", "A1", "Default", &["review".to_string()], Some("Basic"))
+            .unwrap();
+        let id2 = repo
+            .create_basic_note("Q2", "A2", "Default", &["review".to_string()], Some("Basic"))
+            .unwrap();
+
+        let affected = repo.replace_tag(None, "review", "reviewed").unwrap();
+
+        assert_eq!(affected, 2);
+        let n1 = repo.get_note(id1).unwrap();
+        let n2 = repo.get_note(id2).unwrap();
+        assert!(n1.tags.contains(&"reviewed".to_string()));
+        assert!(!n1.tags.contains(&"review".to_string()));
+        assert!(n2.tags.contains(&"reviewed".to_string()));
+    }
+
+    #[test]
+    fn given_notes_when_bulk_adding_tag_then_all_get_tag() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+        let id1 = repo
+            .create_basic_note("Q1", "A1", "Default", &[], Some("Basic"))
+            .unwrap();
+        let id2 = repo
+            .create_basic_note("Q2", "A2", "Default", &[], Some("Basic"))
+            .unwrap();
+
+        let affected = repo.replace_tag(None, "", "batch-2026").unwrap();
+
+        assert_eq!(affected, 2);
+        assert!(repo.get_note(id1).unwrap().tags.contains(&"batch-2026".to_string()));
+        assert!(repo.get_note(id2).unwrap().tags.contains(&"batch-2026".to_string()));
+    }
+
+    #[test]
+    fn given_notes_with_tag_when_bulk_removing_then_tag_gone() {
+        let (_temp_dir, mut repo) = create_test_collection().unwrap();
+        let id1 = repo
+            .create_basic_note("Q1", "A1", "Default", &["obsolete".to_string()], Some("Basic"))
+            .unwrap();
+        let _id2 = repo
+            .create_basic_note("Q2", "A2", "Default", &[], Some("Basic"))
+            .unwrap();
+
+        let affected = repo.replace_tag(None, "obsolete", "").unwrap();
+
+        assert_eq!(affected, 1);
+        assert!(!repo.get_note(id1).unwrap().tags.contains(&"obsolete".to_string()));
     }
 }

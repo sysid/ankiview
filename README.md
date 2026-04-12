@@ -12,7 +12,10 @@ flashcards — all without opening Anki.
 - **List notes** - Browse and search notes from the command line
 - **List card types** - See available card types in your collection
 - **Import markdown** - Convert markdown flashcards to Anki notes
-- **Smart updates** - Automatically track cards with ID comments
+- **Tag management** - Add, remove, or replace tags on notes via CLI
+- **Edit notes** - Open any note in your `$EDITOR` with a type-aware template
+- **Bulk tag operations** - Rename, bulk-add, or bulk-remove tags across notes
+- **Smart updates** - Automatically track cards with ID comments; tags merged on re-import
 - **Media handling** - Import images from markdown files
 - **Hash caching** - Skip unchanged files for fast re-imports
 - **Custom card types** - Use any card type from your collection
@@ -108,6 +111,52 @@ ankiview list-card-types
 
 This shows you which card types you can use with the `--card-type` flag.
 
+### Manage tags
+
+Add or remove tags on individual notes:
+
+```bash
+# Add tags to a note
+ankiview tag add 1234567890 review urgent
+
+# Add a hierarchical tag
+ankiview tag add 1234567890 "topic::math::algebra"
+
+# Remove tags from a note
+ankiview tag remove 1234567890 review
+```
+
+Replace, bulk-add, or bulk-remove tags across the collection:
+
+```bash
+# Rename a tag on all notes
+ankiview tag replace --old "review" --new "reviewed"
+
+# Add a tag to all notes
+ankiview tag replace --old "" --new "batch-2026"
+
+# Remove a tag from all notes
+ankiview tag replace --old "obsolete" --new ""
+
+# Scope to specific notes using Anki search syntax
+ankiview tag replace --old "review" --new "reviewed" --query "deck:Physics"
+```
+
+### Edit a note
+
+Open a note in your `$EDITOR` for full editing of fields and tags:
+
+```bash
+ankiview edit 1234567890
+```
+
+The editor opens a structured template adapted to the note type:
+- **Basic notes** show Front/Back fields
+- **Cloze notes** show Text/Extra fields
+- **Custom note types** show their actual field names
+
+Fields are presented as raw HTML. Tags can be edited in the same session. The template is validated before saving (empty required fields and missing cloze deletions are rejected).
+
 ### Collect markdown cards
 
 Import markdown flashcards into your Anki collection:
@@ -167,8 +216,9 @@ Deck: ComputerScience
 
 1. AnkiView reads your markdown files
 2. Creates or updates notes in Anki
-3. Injects ID comments into your markdown for tracking
-4. Copies media files to Anki's collection.media/
+3. Merges tags from markdown onto existing notes (additive only — tags are never removed by `collect`)
+4. Injects ID comments into your markdown for tracking
+5. Copies media files to Anki's collection.media/
 
 After the first run, your markdown will have ID comments:
 ```markdown
@@ -247,11 +297,12 @@ The project structure:
 
 ```
 src/
-├── application/     # Use cases and business logic
-├── cli/            # Command-line interface
-├── domain/         # Core domain models
-├── infrastructure/ # External interfaces (Anki, browser)
-└── ports/          # Input/output adapters
+├── application/     # Use cases: NoteViewer, NoteUpdater, TagManager, NoteEditor, ...
+├── cli/            # Command-line interface (clap)
+├── domain/         # Core domain models (Note, DomainError)
+├── infrastructure/ # Adapters: AnkiRepository, NoteTemplate, renderers
+├── inka/           # Card collection subsystem (markdown → Anki)
+└── ports/          # Output adapters (HtmlPresenter)
 ```
 
 ### Running Tests
@@ -297,6 +348,18 @@ RUST_LOG=debug cargo test
    - File may be unchanged (check hash cache)
    - Use `-f` flag to force rebuild
    - Verify ID comments are correct and match Anki notes
+
+7. **Tags not removed after editing markdown** (collect command)
+   - This is by design: `collect` only *adds* tags (merge-only semantics)
+   - Use `ankiview tag remove <NOTE_ID> <tag>` to remove tags
+
+8. **"Editor exited with non-zero status"** (edit command)
+   - Your editor quit abnormally; the edit was aborted
+   - Check the `EDITOR` environment variable is set correctly
+
+9. **"Cloze note Text field must contain at least one cloze deletion"** (edit command)
+   - Cloze notes require `{{c1::...}}` syntax in the Text field
+   - Add at least one cloze deletion before saving
 
 ## Contributing 🤝
 

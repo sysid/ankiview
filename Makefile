@@ -18,17 +18,6 @@ BINARY = ankiview
 # Makefile directory
 CODE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
-# define files
-MANS = $(wildcard ./*.md)
-MAN_HTML = $(MANS:.md=.html)
-MAN_PAGES = $(MANS:.md=.1)
-# avoid circular targets
-MAN_BINS = $(filter-out ./tw-extras.md, $(MANS))
-
-.PHONY: all
-all: clean build-fast install-debug  ## all
-	:
-
 ################################################################################
 # Admin \
 ADMIN::  ## ##################################################################
@@ -58,8 +47,12 @@ anki:  ## anki
 	# specify base folder with -b
 	open /Applications/Anki.app --args -b $(HOME)/xxx/ankiview-test
 
+.PHONY: manual-test
+manual-test: build-fast init-env  ## manual test (collection in ~/xxx), make manual-test FILTER=tag
+	./scripts/manual-test.sh $(FILTER)
+
 .PHONY: test
-test:  ## Run all tests (unit, integration, and doc tests) with debug logging
+test:  ## tests, single-threaded (all functionality)
 	pushd $(pkg_src) && RUST_LOG=INFO cargo test --all-features --all-targets -- --test-threads=1  #--nocapture
 
 .PHONY: refresh-test-fixture
@@ -75,6 +68,14 @@ test-verbose:  ## Run tests with verbose logging
 # Building, Deploying \
 BUILDING:  ## ##################################################################
 
+.PHONY: all
+all: clean build install  ## all
+	:
+
+.PHONY: all-fast
+all-fast: clean build-fast install-debug  ## all-debug: debug build
+	:
+
 .PHONY: doc
 doc:  ## doc
 	@rustup doc --std
@@ -82,38 +83,39 @@ doc:  ## doc
 
 .PHONY: upload
 upload:  ## upload
-	@echo "anki not on crate.io, so cannt publish"
-	#@if [ -z "$$CARGO_REGISTRY_TOKEN" ]; then \
-	#	echo "Error: CARGO_REGISTRY_TOKEN is not set"; \
-	#	exit 1; \
-	#fi
-	#@echo "CARGO_REGISTRY_TOKEN is set"
-	#pushd $(pkg_src) && cargo release publish --execute
+	@echo "anki not on crate.io, so cannot publish"
 
 .PHONY: build
-build:  ## build
+build:  ## build release version
 	pushd $(pkg_src) && cargo build --release
 
 .PHONY: build-fast
 build-fast:  ## build debug version
 	pushd $(pkg_src) && cargo build
 
+# macOS Code Signing Fix:
+# When Rust's linker builds a binary, it creates an adhoc linker-signed signature.
+# When copied with `cp`, macOS preserves this signature but it becomes invalid
+# because the hash was computed for the original path/inode. macOS AMFI (Apple
+# Mobile File Integrity) detects the mismatch and kills the process with SIGKILL
+# (signal 9, exit code 137). Re-signing with `codesign --force --sign -` creates
+# a fresh adhoc signature valid for the new location.
+
 .PHONY: install-debug
 install-debug: uninstall  ## install-debug (no release version)
 	@VERSION=$(shell cat VERSION) && \
 		echo "-M- Installing $$VERSION" && \
 		cp -vf ankiview/target/debug/$(BINARY) ~/bin/$(BINARY)$$VERSION && \
+		codesign --force --sign - ~/bin/$(BINARY)$$VERSION && \
 		ln -vsf ~/bin/$(BINARY)$$VERSION ~/bin/$(BINARY)
 		# ~/bin/$(BINARY) completion bash > ~/.bash_completions/ankiview
 
-#.PHONY: install
-#install: uninstall  ## install
-	#@cp -vf $(pkg_src)/target/release/$(BINARY) ~/bin/$(BINARY)
 .PHONY: install
 install: uninstall  ## install
 	@VERSION=$(shell cat VERSION) && \
-		echo "-M- Installagin $$VERSION" && \
+		echo "-M- Installing $$VERSION" && \
 		cp -vf ankiview/target/release/$(BINARY) ~/bin/$(BINARY)$$VERSION && \
+		codesign --force --sign - ~/bin/$(BINARY)$$VERSION && \
 		ln -vsf ~/bin/$(BINARY)$$VERSION ~/bin/$(BINARY)
 
 .PHONY: uninstall
@@ -159,7 +161,6 @@ check-github-token:  ## Check if GITHUB_TOKEN is set
 		exit 1; \
 	fi
 	@echo "GITHUB_TOKEN is set"
-	#@$(MAKE) fix-version  # not working: rustrover deleay
 
 .PHONY: fix-version
 fix-version: check-github-token  ## fix-version of Cargo.toml, re-connect with HEAD
@@ -169,13 +170,14 @@ fix-version: check-github-token  ## fix-version of Cargo.toml, re-connect with H
 	git push --force-with-lease
 	git push --tags --force
 
-.PHONY: style
-style:  ## style
+.PHONY: format
+format:  ## format
 	pushd $(pkg_src) && cargo fmt
 
 .PHONY: lint
-lint:  ## lint
-	pushd $(pkg_src) && cargo clippy
+lint:  ## lint and fix
+	pushd $(pkg_src) && cargo clippy --fix -- -A unused_imports
+	pushd $(pkg_src) && cargo fix --lib -p ankiview --tests
 
 
 ################################################################################
@@ -185,21 +187,6 @@ CLEAN:  ## ############################################################
 .PHONY: clean
 clean:clean-rs  ## clean all
 	:
-
-.PHONY: clean-build
-clean-build: ## remove build artifacts
-	rm -fr build/
-	rm -fr dist/
-	rm -fr .eggs/
-	find . \( -path ./env -o -path ./venv -o -path ./.env -o -path ./.venv \) -prune -o -name '*.egg-info' -exec rm -fr {} +
-	find . \( -path ./env -o -path ./venv -o -path ./.env -o -path ./.venv \) -prune -o -name '*.egg' -exec rm -f {} +
-
-.PHONY: clean-pyc
-clean-pyc: ## remove Python file artifacts
-	find . -name '*.pyc' -exec rm -f {} +
-	find . -name '*.pyo' -exec rm -f {} +
-	find . -name '*~' -exec rm -f {} +
-	find . -name '__pycache__' -exec rm -fr {} +
 
 .PHONY: clean-rs
 clean-rs:  ## clean-rs
@@ -227,17 +214,3 @@ help:
 
 debug:  ## debug
 	@echo "-D- CODE_DIR: $(CODE_DIR)"
-
-
-.PHONY: list
-list: *  ## list
-	@echo $^
-
-.PHONY: list2
-%: %.md  ## list2
-	@echo $^
-
-
-%-plan:  ## call with: make <whatever>-plan
-	@echo $@ : $*
-	@echo $@ : $^

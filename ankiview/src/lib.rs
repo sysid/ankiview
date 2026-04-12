@@ -25,7 +25,7 @@ pub mod ports;
 pub mod util;
 
 use crate::application::NoteRepository;
-use crate::cli::args::{Args, Command};
+use crate::cli::args::{Args, Command, TagCommand};
 use anyhow::{Context, Result};
 use infrastructure::AnkiRepository;
 use ports::HtmlPresenter;
@@ -71,6 +71,8 @@ pub fn run(args: Args) -> Result<()> {
             handle_collect_command(path, recursive, config, collection_path)
         }
         Command::ListCardTypes => handle_list_card_types_command(collection_path),
+        Command::Tag { subcommand } => handle_tag_command(subcommand, collection_path),
+        Command::Edit { note_id } => handle_edit_command(note_id, collection_path),
     }
 }
 
@@ -238,6 +240,79 @@ fn handle_collect_command(
         for error in errors {
             eprintln!("  {}", error);
         }
+    }
+
+    Ok(())
+}
+
+fn handle_tag_command(subcommand: TagCommand, collection_path: PathBuf) -> Result<()> {
+    match subcommand {
+        TagCommand::Add { note_id, tags } => {
+            let repository = AnkiRepository::new(&collection_path)?;
+            let mut updater = application::NoteUpdater::new(repository);
+
+            info!(note_id, ?tags, "Adding tags");
+            updater
+                .add_tags(note_id, &tags)
+                .with_context(|| format!("Failed to add tags to note {}", note_id))?;
+
+            println!("Added {} tag(s) to note {}.", tags.len(), note_id);
+            Ok(())
+        }
+        TagCommand::Remove { note_id, tags } => {
+            let repository = AnkiRepository::new(&collection_path)?;
+            let mut updater = application::NoteUpdater::new(repository);
+
+            info!(note_id, ?tags, "Removing tags");
+            updater
+                .remove_tags(note_id, &tags)
+                .with_context(|| format!("Failed to remove tags from note {}", note_id))?;
+
+            println!("Removed {} tag(s) from note {}.", tags.len(), note_id);
+            Ok(())
+        }
+        TagCommand::Replace { old, new, query } => {
+            if old.is_empty() && new.is_empty() {
+                return Err(anyhow::anyhow!(
+                    "Both --old and --new cannot be empty."
+                ));
+            }
+
+            let repository = AnkiRepository::new(&collection_path)?;
+            let mut manager = application::TagManager::new(repository);
+
+            info!(old_tag = %old, new_tag = %new, ?query, "Replacing tags");
+            let affected = manager
+                .replace_tag(query.as_deref(), &old, &new)
+                .with_context(|| "Failed to replace tags")?;
+
+            // Format output based on mode
+            if old.is_empty() {
+                println!("Added tag '{}' to {} note(s).", new, affected);
+            } else if new.is_empty() {
+                println!("Removed tag '{}' from {} note(s).", old, affected);
+            } else {
+                println!(
+                    "Replaced tag '{}' → '{}' on {} note(s).",
+                    old, new, affected
+                );
+            }
+            Ok(())
+        }
+    }
+}
+
+fn handle_edit_command(note_id: i64, collection_path: PathBuf) -> Result<()> {
+    let repository = AnkiRepository::new(&collection_path)?;
+    let mut editor = application::NoteEditor::new(repository);
+
+    info!(note_id, "Editing note");
+    let changed = editor.edit(note_id)?;
+
+    if changed {
+        println!("Note {} updated successfully.", note_id);
+    } else {
+        println!("No changes detected.");
     }
 
     Ok(())

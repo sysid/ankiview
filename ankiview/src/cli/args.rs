@@ -102,4 +102,65 @@ pub enum Command {
     /// Displays all available note types that can be used with the --card-type flag.
     /// Each card type defines the fields and card templates for flashcards.
     ListCardTypes,
+
+    /// Manage tags on notes
+    ///
+    /// Add, remove, or replace tags on individual notes or across the collection.
+    Tag {
+        #[command(subcommand)]
+        subcommand: TagCommand,
+    },
+
+    /// Edit a note in your $EDITOR
+    ///
+    /// Opens the note in a structured template showing all fields and tags.
+    /// The template adapts to the note type (Basic, Cloze, custom).
+    Edit {
+        /// Note ID to edit
+        #[arg(value_name = "NOTE_ID")]
+        note_id: i64,
+    },
+}
+
+#[derive(Subcommand, Debug, Clone)]
+pub enum TagCommand {
+    /// Add tags to a note
+    Add {
+        /// Note ID
+        #[arg(value_name = "NOTE_ID")]
+        note_id: i64,
+
+        /// Tags to add
+        #[arg(value_name = "TAGS", required = true)]
+        tags: Vec<String>,
+    },
+
+    /// Remove tags from a note
+    Remove {
+        /// Note ID
+        #[arg(value_name = "NOTE_ID")]
+        note_id: i64,
+
+        /// Tags to remove
+        #[arg(value_name = "TAGS", required = true)]
+        tags: Vec<String>,
+    },
+
+    /// Replace, bulk-add, or bulk-remove a tag across notes
+    ///
+    /// Modes: rename (both non-empty), bulk-add (--old ""), bulk-remove (--new "").
+    /// Use --query to filter which notes are affected.
+    Replace {
+        /// Tag to match/remove (empty string for bulk-add mode)
+        #[arg(long)]
+        old: String,
+
+        /// Tag to set/add (empty string for bulk-remove mode)
+        #[arg(long)]
+        new: String,
+
+        /// Optional Anki search query to filter affected notes
+        #[arg(long)]
+        query: Option<String>,
+    },
 }
