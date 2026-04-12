@@ -47,6 +47,10 @@ anki:  ## anki
 	# specify base folder with -b
 	open /Applications/Anki.app --args -b $(HOME)/xxx/ankiview-test
 
+.PHONY: manual-test
+manual-test: build-fast init-env  ## manual test (collection in ~/xxx), make manual-test FILTER=tag
+	./scripts/manual-test.sh $(FILTER)
+
 .PHONY: test
 test:  ## tests, single-threaded (all functionality)
 	pushd $(pkg_src) && RUST_LOG=INFO cargo test --all-features --all-targets -- --test-threads=1  #--nocapture
