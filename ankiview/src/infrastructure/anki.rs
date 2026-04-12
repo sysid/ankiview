@@ -346,6 +346,82 @@ impl AnkiRepository {
     }
 }
 
+// --- Tag and field update helpers (used by NoteRepository trait impl) ---
+
+impl AnkiRepository {
+    /// Add tags to a note, merging with existing tags (no duplicates)
+    fn merge_tags_on_note(&mut self, note_id: i64, new_tags: &[String]) -> Result<()> {
+        let mut note = self
+            .collection
+            .storage
+            .get_note(NoteId(note_id))
+            .context("Failed to get note from storage")?
+            .ok_or_else(|| anyhow::anyhow!("Note not found: {}", note_id))?;
+
+        // Merge: add only tags not already present
+        for tag in new_tags {
+            if !note.tags.iter().any(|t| t == tag) {
+                note.tags.push(tag.clone());
+            }
+        }
+
+        self.collection
+            .update_note(&mut note)
+            .context("Failed to update note tags")?;
+
+        debug!(note_id, tags_added = new_tags.len(), "Merged tags on note");
+        Ok(())
+    }
+
+    /// Remove specific tags from a note
+    fn remove_tags_from_note(&mut self, note_id: i64, tags_to_remove: &[String]) -> Result<()> {
+        let mut note = self
+            .collection
+            .storage
+            .get_note(NoteId(note_id))
+            .context("Failed to get note from storage")?
+            .ok_or_else(|| anyhow::anyhow!("Note not found: {}", note_id))?;
+
+        note.tags.retain(|t| !tags_to_remove.contains(t));
+
+        self.collection
+            .update_note(&mut note)
+            .context("Failed to update note tags")?;
+
+        debug!(note_id, "Removed tags from note");
+        Ok(())
+    }
+
+    /// Update fields and tags on a note
+    fn update_fields_and_tags(
+        &mut self,
+        note_id: i64,
+        fields: &[String],
+        tags: &[String],
+    ) -> Result<()> {
+        let mut note = self
+            .collection
+            .storage
+            .get_note(NoteId(note_id))
+            .context("Failed to get note from storage")?
+            .ok_or_else(|| anyhow::anyhow!("Note not found: {}", note_id))?;
+
+        for (index, field_value) in fields.iter().enumerate() {
+            note.set_field(index, field_value)
+                .with_context(|| format!("Failed to set field {} on note {}", index, note_id))?;
+        }
+
+        note.tags = tags.to_vec();
+
+        self.collection
+            .update_note(&mut note)
+            .context("Failed to update note")?;
+
+        debug!(note_id, "Updated note fields and tags");
+        Ok(())
+    }
+}
+
 impl NoteRepository for AnkiRepository {
     #[instrument(level = "debug", skip(self))]
     fn get_note(&mut self, id: i64) -> Result<Note, DomainError> {
@@ -472,6 +548,98 @@ impl NoteRepository for AnkiRepository {
             .collect();
 
         Ok(notetypes)
+    }
+
+    #[instrument(level = "debug", skip(self))]
+    fn add_tags(&mut self, id: i64, tags: &[String]) -> Result<(), DomainError> {
+        self.merge_tags_on_note(id, tags)
+            .map_err(|e| DomainError::CollectionError(e.to_string()))
+    }
+
+    #[instrument(level = "debug", skip(self))]
+    fn remove_tags(&mut self, id: i64, tags: &[String]) -> Result<(), DomainError> {
+        self.remove_tags_from_note(id, tags)
+            .map_err(|e| DomainError::CollectionError(e.to_string()))
+    }
+
+    #[instrument(level = "debug", skip(self))]
+    fn update_note_fields_and_tags(
+        &mut self,
+        id: i64,
+        fields: &[String],
+        tags: &[String],
+    ) -> Result<(), DomainError> {
+        self.update_fields_and_tags(id, fields, tags)
+            .map_err(|e| DomainError::CollectionError(e.to_string()))
+    }
+
+    #[instrument(level = "debug", skip(self))]
+    fn replace_tag(
+        &mut self,
+        query: Option<&str>,
+        old_tag: &str,
+        new_tag: &str,
+    ) -> Result<usize, DomainError> {
+        use anki::search::SearchNode;
+
+        // Get note IDs based on query
+        let note_ids = match query {
+            Some(q) if !q.is_empty() => self
+                .collection
+                .search_notes_unordered(q)
+                .map_err(|e| DomainError::CollectionError(e.to_string()))?,
+            _ => {
+                let search_node = SearchNode::WholeCollection;
+                self.collection
+                    .search_notes_unordered(search_node)
+                    .map_err(|e| DomainError::CollectionError(e.to_string()))?
+            }
+        };
+
+        let mut affected = 0;
+
+        for note_id in note_ids {
+            let mut note = match self.collection.storage.get_note(note_id) {
+                Ok(Some(n)) => n,
+                _ => continue,
+            };
+
+            let had_old_tag = !old_tag.is_empty() && note.tags.iter().any(|t| t == old_tag);
+            let mut changed = false;
+
+            if old_tag.is_empty() {
+                // Bulk add mode: add new_tag if not present
+                if !note.tags.iter().any(|t| t == new_tag) {
+                    note.tags.push(new_tag.to_string());
+                    changed = true;
+                }
+            } else if new_tag.is_empty() {
+                // Bulk remove mode: remove old_tag
+                if had_old_tag {
+                    note.tags.retain(|t| t != old_tag);
+                    changed = true;
+                }
+            } else {
+                // Rename mode: replace old_tag with new_tag
+                if had_old_tag {
+                    note.tags.retain(|t| t != old_tag);
+                    if !note.tags.iter().any(|t| t == new_tag) {
+                        note.tags.push(new_tag.to_string());
+                    }
+                    changed = true;
+                }
+            }
+
+            if changed {
+                self.collection
+                    .update_note(&mut note)
+                    .map_err(|e| DomainError::CollectionError(e.to_string()))?;
+                affected += 1;
+            }
+        }
+
+        debug!(affected, old_tag, new_tag, "Tag replace completed");
+        Ok(affected)
     }
 }
 

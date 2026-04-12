@@ -95,6 +95,75 @@ impl NoteRepository for MockNoteRepository {
     fn list_notetypes(&mut self) -> Result<Vec<(i64, String)>, DomainError> {
         Ok(self.notetypes.clone())
     }
+
+    fn add_tags(&mut self, id: i64, tags: &[String]) -> Result<(), DomainError> {
+        let note = self.notes.get_mut(&id).ok_or(DomainError::NoteNotFound(id))?;
+        for tag in tags {
+            if !note.tags.contains(tag) {
+                note.tags.push(tag.clone());
+            }
+        }
+        Ok(())
+    }
+
+    fn remove_tags(&mut self, id: i64, tags: &[String]) -> Result<(), DomainError> {
+        let note = self.notes.get_mut(&id).ok_or(DomainError::NoteNotFound(id))?;
+        note.tags.retain(|t| !tags.contains(t));
+        Ok(())
+    }
+
+    fn update_note_fields_and_tags(
+        &mut self,
+        id: i64,
+        fields: &[String],
+        tags: &[String],
+    ) -> Result<(), DomainError> {
+        let note = self.notes.get_mut(&id).ok_or(DomainError::NoteNotFound(id))?;
+        if let Some(front) = fields.first() {
+            note.front = front.clone();
+        }
+        if let Some(back) = fields.get(1) {
+            note.back = back.clone();
+        }
+        note.tags = tags.to_vec();
+        Ok(())
+    }
+
+    fn replace_tag(
+        &mut self,
+        _query: Option<&str>,
+        old_tag: &str,
+        new_tag: &str,
+    ) -> Result<usize, DomainError> {
+        let mut affected = 0;
+        for note in self.notes.values_mut() {
+            let had_old = !old_tag.is_empty() && note.tags.contains(&old_tag.to_string());
+            let mut changed = false;
+
+            if old_tag.is_empty() {
+                if !note.tags.contains(&new_tag.to_string()) {
+                    note.tags.push(new_tag.to_string());
+                    changed = true;
+                }
+            } else if new_tag.is_empty() {
+                if had_old {
+                    note.tags.retain(|t| t != old_tag);
+                    changed = true;
+                }
+            } else if had_old {
+                note.tags.retain(|t| t != old_tag);
+                if !note.tags.contains(&new_tag.to_string()) {
+                    note.tags.push(new_tag.to_string());
+                }
+                changed = true;
+            }
+
+            if changed {
+                affected += 1;
+            }
+        }
+        Ok(affected)
+    }
 }
 
 /// Builder for MockNoteRepository

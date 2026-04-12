@@ -1,2 +1,5 @@
+specs/
+.workmux.yaml
+.specify/
 thoughts/
 data/testuser/collection.anki2-wal
