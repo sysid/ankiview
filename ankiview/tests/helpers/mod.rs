@@ -1,5 +1,6 @@
 use ankiview::infrastructure::AnkiRepository;
 use anyhow::{Context, Result};
+use rusqlite::Connection;
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
@@ -68,6 +69,48 @@ fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// Holds a SQLite lock on a collection path for the lifetime of the guard.
+/// Used by lock-detection tests to simulate "Anki (or another process) is
+/// holding the DB". Dropping the guard releases the lock (via ROLLBACK and
+/// connection close), letting the DB become openable again.
+#[allow(dead_code)]
+pub struct LockGuard {
+    // Must be kept alive; releasing occurs on drop.
+    conn: Connection,
+}
+
+#[allow(dead_code)]
+pub enum LockMode {
+    /// RESERVED lock — blocks other writers. Equivalent to an active writer
+    /// connection that has begun a write transaction but not yet committed.
+    Reserved,
+    /// EXCLUSIVE lock — blocks all other connections. Equivalent to the
+    /// state Anki's writer holds while actually writing pages.
+    Exclusive,
+}
+
+#[allow(dead_code)]
+impl LockGuard {
+    /// Acquire the given lock mode on `path` and hold it until drop.
+    pub fn acquire(path: &Path, mode: LockMode) -> Result<Self> {
+        let conn = Connection::open(path).context("LockGuard: open connection")?;
+        let stmt = match mode {
+            LockMode::Reserved => "BEGIN IMMEDIATE;",
+            LockMode::Exclusive => "BEGIN EXCLUSIVE;",
+        };
+        conn.execute_batch(stmt)
+            .context("LockGuard: acquire transaction lock")?;
+        Ok(Self { conn })
+    }
+}
+
+impl Drop for LockGuard {
+    fn drop(&mut self) {
+        // Best-effort release; connection drop would also release.
+        let _ = self.conn.execute_batch("ROLLBACK;");
+    }
 }
 
 /// Known test note IDs from golden dataset

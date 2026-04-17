@@ -18,11 +18,6 @@ impl AnkiRepository {
         let path = PathBuf::from(collection_path.as_ref());
         debug!(?path, "Creating new AnkiRepository");
 
-        // FIRST: Check if Anki is running before attempting anything else
-        // This prevents database corruption from concurrent access
-        crate::util::process::check_anki_not_running()
-            .context("Cannot access collection while Anki is running")?;
-
         // Check if file exists
         if !path.exists() {
             return Err(DomainError::CollectionError(format!(
@@ -52,17 +47,29 @@ impl AnkiRepository {
             }
         }
 
-        // Try to open the collection with improved error context
-        let collection = CollectionBuilder::new(path.clone())
-            .build()
-            .with_context(|| {
-                "Failed to open Anki collection.\n\n\
-                 Possible causes:\n\
-                 - Anki is running (please close it completely)\n\
-                 - Database is locked by another process\n\
-                 - Collection file is corrupted\n\n\
-                 If you just closed Anki, wait 5-10 seconds and try again."
-            })?;
+        // Authoritative check: is the SQLite file itself locked by another
+        // process? Catches Anki regardless of how it was launched (including
+        // python-launcher setups the old process-name check missed) and any
+        // other process holding the DB.
+        crate::util::lock::check_collection_not_locked(&path)?;
+
+        // TOCTOU defence: if another process grabs the lock in the microsecond
+        // window between our probe and CollectionBuilder::build(), surface
+        // the same clear lock-error message instead of the generic one.
+        let collection = CollectionBuilder::new(path.clone()).build().map_err(|e| {
+            let err: anyhow::Error = e.into();
+            if crate::util::lock::is_sqlite_busy_error(&err) {
+                anyhow::anyhow!(crate::util::lock::locked_message(&path))
+            } else {
+                err.context(
+                    "Failed to open Anki collection.\n\n\
+                     Possible causes:\n\
+                     - Collection file is corrupted\n\
+                     - Incompatible schema version\n\n\
+                     If you just closed Anki, wait 5-10 seconds and try again.",
+                )
+            }
+        })?;
 
         // Get media directory path
         let media_dir = path.parent().unwrap().join("collection.media");
