@@ -12,30 +12,29 @@ readme = "../README.md"
 license = "BSD-3-Clause"
 
 [dependencies]
-anki = { git = "https://github.com/ankitects/anki.git", tag = "25.02" }  # prevents from crates.io
+anki = { git = "https://github.com/ankitects/anki.git", tag = "25.09.2" }  # prevents from crates.io
 anyhow = "1.0.96"
 clap = { version = "4.5.30", features = ["derive"] }
-ctor = "0.3.6"
 dirs = "6.0.0"
 html-escape = "0.2.13"
-itertools = "0.14.0"
 regex = "1.11.1"
-rstest = "0.24.0"
-rusqlite = "0.30"
+rusqlite = "0.36"
 serde = { version = "1.0.218", features = ["derive"] }
 serde_json = "1.0"
 tempfile = "3.17.1"
 thiserror = "2.0.11"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+# Required to satisfy upstream `anki` (calls AsyncReadExt::read_to_end). Anki's
+# workspace doesn't declare this feature; consuming anki as a single git dep
+# means feature-unification doesn't pick it up unless we ask for it directly.
+tokio = { version = "1", features = ["io-util"] }
 
 # inka dependencies
 pulldown-cmark = "0.12"
 toml = "0.8"
 sha2 = "0.10"
 walkdir = "2.4"
-reqwest = { version = "0.11", features = ["blocking"] }
-lazy_static = "1.4"
 
 [[bin]]
 name = "build_test_collection"

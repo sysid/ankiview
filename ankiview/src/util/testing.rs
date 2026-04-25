@@ -298,11 +298,6 @@ pub fn print_active_env_vars() {
 mod tests {
     use super::*;
 
-    #[ctor::ctor]
-    fn init() {
-        init_test_setup().expect("Failed to initialize test setup");
-    }
-
     #[test]
     fn given_note_added_when_getting_note_then_returns_note() {
         let test_note = Note {

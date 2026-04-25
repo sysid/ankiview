@@ -1,22 +1,26 @@
-use lazy_static::lazy_static;
 use regex::Regex;
+use std::sync::LazyLock;
 
-lazy_static! {
-    static ref ANKI_CLOZE_REGEX: Regex =
-        Regex::new(r"\{\{c\d+::[\s\S]*?\}\}").expect("Failed to compile Anki cloze regex");
-    static ref EXPLICIT_SHORT_CLOZE_REGEX: Regex = Regex::new(r"\{c?(\d+)::([\s\S]*?)\}")
-        .expect("Failed to compile explicit short cloze regex");
-    static ref IMPLICIT_SHORT_CLOZE_REGEX: Regex =
-        Regex::new(r"\{([\s\S]*?)\}").expect("Failed to compile implicit short cloze regex");
-    static ref CODE_BLOCK_REGEX: Regex =
-        Regex::new(r"```[\s\S]+?```").expect("Failed to compile code block regex");
-    static ref INLINE_CODE_REGEX: Regex =
-        Regex::new(r"`[\S\s]+?`").expect("Failed to compile inline code regex");
-    static ref BLOCK_MATH_REGEX: Regex =
-        Regex::new(r"\$\$[\s\S]+?\$\$").expect("Failed to compile block math regex");
-    static ref INLINE_MATH_REGEX: Regex =
-        Regex::new(r"\$[^\s$][^$]*?\$").expect("Failed to compile inline math regex");
-}
+static ANKI_CLOZE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\{\{c\d+::[\s\S]*?\}\}").expect("Failed to compile Anki cloze regex")
+});
+static EXPLICIT_SHORT_CLOZE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\{c?(\d+)::([\s\S]*?)\}").expect("Failed to compile explicit short cloze regex")
+});
+static IMPLICIT_SHORT_CLOZE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\{([\s\S]*?)\}").expect("Failed to compile implicit short cloze regex")
+});
+static CODE_BLOCK_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"```[\s\S]+?```").expect("Failed to compile code block regex")
+});
+static INLINE_CODE_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"`[\S\s]+?`").expect("Failed to compile inline code regex"));
+static BLOCK_MATH_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\$\$[\s\S]+?\$\$").expect("Failed to compile block math regex")
+});
+static INLINE_MATH_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\$[^\s$][^$]*?\$").expect("Failed to compile inline math regex")
+});
 
 pub fn is_anki_cloze(text: &str) -> bool {
     ANKI_CLOZE_REGEX.is_match(text)

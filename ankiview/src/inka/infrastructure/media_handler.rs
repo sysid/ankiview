@@ -1,15 +1,15 @@
-use lazy_static::lazy_static;
 use regex::Regex;
+use std::sync::LazyLock;
 
-lazy_static! {
-    // Match markdown images: ![alt](path)
-    static ref MD_IMAGE_REGEX: Regex = Regex::new(r"!\[.*?\]\(([^)]+)\)")
-        .expect("Failed to compile markdown image regex");
+// Match markdown images: ![alt](path)
+static MD_IMAGE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"!\[.*?\]\(([^)]+)\)").expect("Failed to compile markdown image regex")
+});
 
-    // Match HTML img tags: <img src="path">
-    static ref HTML_IMAGE_REGEX: Regex = Regex::new(r#"<img[^>]+src="([^"]+)""#)
-        .expect("Failed to compile HTML image regex");
-}
+// Match HTML img tags: <img src="path">
+static HTML_IMAGE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"<img[^>]+src="([^"]+)""#).expect("Failed to compile HTML image regex")
+});
 
 /// Extract image paths from markdown content
 /// Supports both markdown syntax ![alt](path) and HTML <img src="path">

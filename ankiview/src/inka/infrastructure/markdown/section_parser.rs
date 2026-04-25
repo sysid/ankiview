@@ -1,5 +1,5 @@
-use lazy_static::lazy_static;
 use regex::Regex;
+use std::sync::LazyLock;
 
 pub struct SectionParser {
     section_regex: Regex,
@@ -30,14 +30,12 @@ impl Default for SectionParser {
     }
 }
 
-lazy_static! {
-    static ref DECK_REGEX: Regex =
-        Regex::new(r"(?m)^Deck:[ \t]*(.+?)$").expect("Failed to compile deck regex");
-    static ref TAGS_REGEX: Regex =
-        Regex::new(r"(?m)^Tags:[ \t]*(.+?)$").expect("Failed to compile tags regex");
-    static ref NOTE_START_REGEX: Regex =
-        Regex::new(r"(?m)^(?:<!--ID:\S+-->\n)?^\d+\.").expect("Failed to compile note start regex");
-}
+static DECK_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?m)^Deck:[ \t]*(.+?)$").expect("Failed to compile deck regex")
+});
+static TAGS_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?m)^Tags:[ \t]*(.+?)$").expect("Failed to compile tags regex")
+});
 
 pub fn extract_deck_name(section: &str) -> Option<String> {
     DECK_REGEX

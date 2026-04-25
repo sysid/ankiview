@@ -1,14 +1,14 @@
 use anyhow::Result;
-use lazy_static::lazy_static;
 use regex::Regex;
+use std::sync::LazyLock;
 
-lazy_static! {
-    static ref BASIC_CARD_REGEX: Regex =
-        Regex::new(r"(?m)(?:^<!--ID:\S+-->\n)?^\d+\.[\s\S]+?(?:^>.*?(?:\n|$))+")
-            .expect("Failed to compile basic card regex");
-    static ref ID_REGEX: Regex =
-        Regex::new(r"(?m)^<!--ID:(\S+)-->$").expect("Failed to compile ID regex");
-}
+static BASIC_CARD_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?m)(?:^<!--ID:\S+-->\n)?^\d+\.[\s\S]+?(?:^>.*?(?:\n|$))+")
+        .expect("Failed to compile basic card regex")
+});
+static ID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?m)^<!--ID:(\S+)-->$").expect("Failed to compile ID regex")
+});
 
 pub fn is_basic_card(note_str: &str) -> bool {
     BASIC_CARD_REGEX.is_match(note_str)

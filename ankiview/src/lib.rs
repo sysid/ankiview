@@ -361,12 +361,6 @@ pub fn find_collection_path(profile: Option<&str>) -> Result<PathBuf> {
 /// must be public to be used from integration tests
 mod tests {
     use super::*;
-    use crate::util::testing;
-
-    #[ctor::ctor]
-    fn init() {
-        testing::init_test_setup().expect("Failed to initialize test setup");
-    }
 
     #[test]
     fn given_explicit_profile_when_finding_path_then_constructs_correct_path() {

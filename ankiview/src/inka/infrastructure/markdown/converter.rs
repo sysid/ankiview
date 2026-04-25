@@ -1,16 +1,16 @@
-use lazy_static::lazy_static;
 use pulldown_cmark::{html, Options, Parser};
 use regex::Regex;
+use std::sync::LazyLock;
 
-lazy_static! {
-    static ref NEWLINE_TAG_REGEX: Regex =
-        Regex::new(r"\n?(<.+?>)\n?").expect("Failed to compile newline tag regex");
-    static ref INLINE_MATH_REGEX: Regex =
-        Regex::new(r"\$([^\s$][^$]*[^\s$])\$").expect("Failed to compile inline math regex");
-    // Match $$ blocks in HTML context (may have newlines and whitespace)
-    static ref BLOCK_MATH_REGEX: Regex =
-        Regex::new(r"\$\$\s*((?:.|\n)+?)\s*\$\$").expect("Failed to compile block math regex");
-}
+static NEWLINE_TAG_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\n?(<.+?>)\n?").expect("Failed to compile newline tag regex"));
+static INLINE_MATH_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\$([^\s$][^$]*[^\s$])\$").expect("Failed to compile inline math regex")
+});
+// Match $$ blocks in HTML context (may have newlines and whitespace)
+static BLOCK_MATH_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\$\$\s*((?:.|\n)+?)\s*\$\$").expect("Failed to compile block math regex")
+});
 
 pub fn markdown_to_html(text: &str) -> String {
     // Parse markdown with pulldown-cmark first

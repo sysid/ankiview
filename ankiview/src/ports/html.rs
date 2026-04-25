@@ -235,36 +235,32 @@ impl HtmlPresenter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rstest::rstest;
 
-    #[rstest]
-    #[case(
-        r#"<pre><code class="language-tex">$\begin{cases} a, & x < 0 \\ b, & x \geq 0 \end{cases}$</code></pre>"#,
-        r"$\begin{cases} a, & x < 0 \\ b, & x \geq 0 \end{cases}$",
-        Some("/media")
-    )]
-    #[case(
-        r#"<img src="test.jpg" alt="test">"#,
-        r#"<img src="file:///media/test.jpg" alt="test">"#,
-        Some("/media")
-    )]
-    #[case(
-        r#"<img src="https://example.com/test.jpg" alt="test">"#,
-        r#"<img src="https://example.com/test.jpg" alt="test">"#,
-        Some("/media")
-    )]
-    fn test_content_processing(
-        #[case] input: &str,
-        #[case] expected: &str,
-        #[case] media_dir: Option<&str>,
-    ) {
-        let presenter = if let Some(dir) = media_dir {
-            HtmlPresenter::with_media_dir(dir)
-        } else {
-            HtmlPresenter::new()
-        };
-
-        let processed = presenter.process_content(input);
-        assert_eq!(processed, expected);
+    #[test]
+    fn test_content_processing() {
+        let cases: &[(&str, &str, Option<&str>)] = &[
+            (
+                r#"<pre><code class="language-tex">$\begin{cases} a, & x < 0 \\ b, & x \geq 0 \end{cases}$</code></pre>"#,
+                r"$\begin{cases} a, & x < 0 \\ b, & x \geq 0 \end{cases}$",
+                Some("/media"),
+            ),
+            (
+                r#"<img src="test.jpg" alt="test">"#,
+                r#"<img src="file:///media/test.jpg" alt="test">"#,
+                Some("/media"),
+            ),
+            (
+                r#"<img src="https://example.com/test.jpg" alt="test">"#,
+                r#"<img src="https://example.com/test.jpg" alt="test">"#,
+                Some("/media"),
+            ),
+        ];
+        for (input, expected, media_dir) in cases {
+            let presenter = match media_dir {
+                Some(dir) => HtmlPresenter::with_media_dir(dir),
+                None => HtmlPresenter::new(),
+            };
+            assert_eq!(&presenter.process_content(input), expected, "input: {input}");
+        }
     }
 }
